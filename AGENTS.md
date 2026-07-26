@@ -15,6 +15,15 @@ Use the smallest relevant set of skills for the task:
 
 Issues are tracked in GitHub Issues for `askoma93/meeting-room-booking`. See `docs/agents/issue-tracker.md`.
 
+### Task completion
+
+When work originates from a GitHub issue, do not consider the task complete until
+its acceptance criteria are implemented, the relevant checks and code review
+pass, all task-related changes are committed and pushed to the current remote
+branch, and the originating issue is closed with a concise completion comment.
+Do this automatically unless the user explicitly asks to keep the issue open or
+not to push.
+
 ### Triage labels
 
 This repo uses the default mattpocock/skills triage labels. See `docs/agents/triage-labels.md`.
