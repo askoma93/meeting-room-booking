@@ -1,0 +1,6 @@
+.agents/
+.nx/
+coverage/
+dist/
+node_modules/
+tmp/

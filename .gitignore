@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Nx output and local state
+.nx/cache/
+.nx/workspace-data/
+dist/
+tmp/
+coverage/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# Operating system files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,29 @@
+{
+  "name": "meeting-room-booking",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "nx": "nx",
+    "graph": "nx graph",
+    "format": "nx format:write",
+    "format:check": "nx format:check",
+    "lint": "nx run-many -t lint",
+    "typecheck": "nx run-many -t typecheck",
+    "test": "nx run-many -t test",
+    "build": "nx run-many -t build",
+    "check": "npm run lint && npm run typecheck && npm test && npm run build"
+  },
+  "devDependencies": {
+    "@nx/workspace": "23.1.0",
+    "nx": "23.1.0",
+    "prettier": "3.9.6"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "overrides": {
+    "axios": "1.18.0",
+    "brace-expansion": "5.0.8"
+  },
+  "packageManager": "npm@11.6.2"
+}
