@@ -1,0 +1,63 @@
+<a class="skip-link" href="#main-content">Skip to content</a>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <a class="brand" routerLink="/rooms" aria-label="Meeting Room Booking home">
+      <span class="brand-mark" aria-hidden="true">
+        <span></span>
+        <span></span>
+      </span>
+      <span>
+        <strong>Room board</strong>
+        <small>Kyiv office</small>
+      </span>
+    </a>
+
+    <nav aria-label="Primary navigation">
+      <a
+        routerLink="/rooms"
+        routerLinkActive="is-active"
+        ariaCurrentWhenActive="page"
+        aria-label="Rooms"
+      >
+        <span class="nav-mark" aria-hidden="true">R</span>
+        Rooms
+      </a>
+      <a
+        routerLink="/my-bookings"
+        routerLinkActive="is-active"
+        ariaCurrentWhenActive="page"
+        aria-label="My bookings"
+      >
+        <span class="nav-mark" aria-hidden="true">B</span>
+        My bookings
+      </a>
+      <a
+        routerLink="/administrator"
+        routerLinkActive="is-active"
+        ariaCurrentWhenActive="page"
+        aria-label="Administrator"
+      >
+        <span class="nav-mark" aria-hidden="true">A</span>
+        Administrator
+      </a>
+    </nav>
+
+    <div class="office-note">
+      <span class="status-dot" aria-hidden="true"></span>
+      <span>
+        Office time
+        <small>Europe/Kyiv</small>
+      </span>
+    </div>
+
+    <a class="sign-in" routerLink="/auth">
+      <span>Sign in</span>
+      <span aria-hidden="true">→</span>
+    </a>
+  </aside>
+
+  <main id="main-content" tabindex="-1">
+    <router-outlet></router-outlet>
+  </main>
+</div>

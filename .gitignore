@@ -20,3 +20,7 @@ npm-debug.log*
 # Operating system files
 .DS_Store
 Thumbs.db
+
+.angular
+
+__screenshots__/
