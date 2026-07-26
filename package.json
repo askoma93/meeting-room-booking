@@ -11,7 +11,16 @@
     "typecheck": "nx run-many -t typecheck",
     "test": "nx run-many -t test",
     "build": "nx run-many -t build",
-    "check": "npm run lint && npm run typecheck && npm test && npm run build"
+    "check": "npm run lint && npm run typecheck && npm test && npm run build",
+    "db:start": "docker compose up -d postgres",
+    "db:stop": "docker compose stop postgres",
+    "db:test:start": "docker compose --profile test up -d postgres-test",
+    "db:test:stop": "docker compose --profile test stop postgres-test",
+    "db:generate": "prisma generate --config apps/api/prisma.config.ts",
+    "db:validate": "prisma validate --config apps/api/prisma.config.ts",
+    "db:migrate": "prisma migrate deploy --config apps/api/prisma.config.ts",
+    "db:migrate:dev": "prisma migrate dev --config apps/api/prisma.config.ts",
+    "db:test:migrate": "cross-env NODE_ENV=test prisma migrate deploy --config apps/api/prisma.config.ts"
   },
   "devDependencies": {
     "@angular-devkit/architect": "~0.2102.0",
@@ -38,8 +47,10 @@
     "@swc/helpers": "~0.5.18",
     "@types/jest": "~30.0.0",
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.20.0",
     "@typescript-eslint/utils": "^8.58.0",
     "angular-eslint": "^21.0.0",
+    "cross-env": "^10.1.0",
     "eslint": "^9.8.0",
     "eslint-config-prettier": "^10.0.0",
     "jest": "~30.3.0",
@@ -48,6 +59,7 @@
     "jsdom": "^27.1.0",
     "nx": "23.1.0",
     "prettier": "3.9.6",
+    "prisma": "^7.9.0",
     "ts-jest": "^29.4.7",
     "ts-node": "10.9.1",
     "tslib": "^2.3.0",
@@ -77,6 +89,10 @@
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-express": "^11.0.0",
+    "@prisma/adapter-pg": "^7.9.0",
+    "@prisma/client": "^7.9.0",
+    "dotenv": "^17.4.2",
+    "pg": "^8.22.0",
     "reflect-metadata": "^0.2.0",
     "rxjs": "~7.8.0"
   }

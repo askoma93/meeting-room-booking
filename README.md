@@ -1,21 +1,28 @@
 # Meeting Room Booking
 
 Meeting Room Booking is being built as an Nx monorepo for an Angular web
-application and a NestJS API. The Angular shell currently provides the
-route-level home for authentication, Rooms, My Bookings, and Administrator
-flows. Booking behavior and database infrastructure arrive in later tickets.
+application and a NestJS API backed by PostgreSQL through Prisma. The Angular
+shell currently provides the route-level home for authentication, Rooms, My
+Bookings, and Administrator flows.
 
 ## Requirements
 
 - Node.js 22.12 or newer (an even-numbered LTS release is recommended)
 - npm 11
+- Docker with Docker Compose
 
 ## Setup
 
 ```bash
 npm ci
+npm run db:start
+npm run db:migrate
 npm run check
 ```
+
+`db:start` starts PostgreSQL 17 at `localhost:5432`. The development database
+uses a named Docker volume, so its data survives container restarts. Check its
+health with `docker compose ps`, and stop it with `npm run db:stop`.
 
 Start the Angular app at `http://localhost:4200`:
 
@@ -43,14 +50,51 @@ The API reads local settings from `apps/api/.env.local` first and then
 `apps/api/.env`. Tests read `apps/api/.env.test` first and then
 `apps/api/.env`. All of these files are ignored by Git.
 
-Copy the tracked example when local overrides are needed:
+Copy the tracked example before starting the API:
 
 ```bash
 cp apps/api/.env.example apps/api/.env.local
 ```
 
-`PORT` defaults to `3000`, so no environment file is required for the standard
-local or test setup.
+`PORT` defaults to `3000`. `DATABASE_URL` is required by the API and points at
+the development PostgreSQL service in the tracked example.
+
+## Database workflow
+
+Prisma's schema, configuration, and migrations live under `apps/api`. Migrations
+are always run explicitly; starting a container never changes the database
+schema.
+
+| Command                  | Purpose                                                |
+| ------------------------ | ------------------------------------------------------ |
+| `npm run db:start`       | Start the local development PostgreSQL service         |
+| `npm run db:generate`    | Generate the type-safe Prisma Client                   |
+| `npm run db:validate`    | Validate the Prisma configuration and schema           |
+| `npm run db:migrate`     | Apply committed migrations to the development database |
+| `npm run db:migrate:dev` | Create and apply a migration while changing the schema |
+| `npm run db:stop`        | Stop the local development PostgreSQL service          |
+
+The initial migration intentionally contains no domain tables. It establishes
+the migration history before Users, Rooms, and Bookings are introduced.
+Committed Prisma migrations are SQL files and may contain hand-written
+PostgreSQL statements for constraints Prisma Schema Language cannot express.
+
+### PostgreSQL integration tests
+
+The isolated test service listens at `localhost:5433`, stores its data in a
+temporary filesystem, and does not share state with development:
+
+```bash
+cp apps/api/.env.test.example apps/api/.env.test
+npm run db:test:start
+npm run db:test:migrate
+npm test
+npm run db:test:stop
+```
+
+Future API integration tests should use `DATABASE_URL` from `.env.test` and
+reset their own data between cases. CI can use the same URL with a PostgreSQL
+service instead of Docker Compose.
 
 Nx runs each root command against projects that expose its matching target.
 

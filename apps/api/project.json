@@ -7,6 +7,7 @@
   "targets": {
     "build": {
       "executor": "nx:run-commands",
+      "dependsOn": ["prisma-generate"],
       "options": {
         "command": "webpack-cli build",
         "env": {
@@ -66,14 +67,29 @@
       }
     },
     "test": {
+      "dependsOn": ["prisma-generate"],
       "options": {
         "passWithNoTests": true
       }
     },
     "typecheck": {
       "executor": "nx:run-commands",
+      "dependsOn": ["prisma-generate"],
       "options": {
         "command": "tsc --noEmit --project apps/api/tsconfig.app.json"
+      }
+    },
+    "prisma-generate": {
+      "executor": "nx:run-commands",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/prisma/schema.prisma",
+        "{projectRoot}/prisma.config.ts",
+        "{workspaceRoot}/package-lock.json"
+      ],
+      "outputs": ["{projectRoot}/src/generated/prisma"],
+      "options": {
+        "command": "npm run db:generate"
       }
     }
   }

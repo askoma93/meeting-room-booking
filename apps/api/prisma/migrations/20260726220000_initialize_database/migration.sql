@@ -1,0 +1,3 @@
+-- Establish the PostgreSQL migration history before domain tables are added.
+-- Future migrations may include raw SQL for PostgreSQL constraints that Prisma
+-- Schema Language cannot express.

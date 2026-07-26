@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { DatabaseModule } from '../database/database.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -11,6 +12,7 @@ import { HealthController } from './health.controller';
           ? ['apps/api/.env.test', '.env.test', 'apps/api/.env', '.env']
           : ['apps/api/.env.local', '.env.local', 'apps/api/.env', '.env'],
     }),
+    DatabaseModule,
   ],
   controllers: [HealthController],
 })
