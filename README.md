@@ -23,6 +23,35 @@ Start the Angular app at `http://localhost:4200`:
 npx nx serve web
 ```
 
+Start the NestJS API at `http://localhost:3000/api`:
+
+```bash
+npx nx serve api
+```
+
+Check that the API is running:
+
+```bash
+curl http://localhost:3000/api/health
+```
+
+The response is `{"status":"ok"}`.
+
+## Environment configuration
+
+The API reads local settings from `apps/api/.env.local` first and then
+`apps/api/.env`. Tests read `apps/api/.env.test` first and then
+`apps/api/.env`. All of these files are ignored by Git.
+
+Copy the tracked example when local overrides are needed:
+
+```bash
+cp apps/api/.env.example apps/api/.env.local
+```
+
+`PORT` defaults to `3000`, so no environment file is required for the standard
+local or test setup.
+
 Nx runs each root command against projects that expose its matching target.
 
 | Command                | Purpose                                            |
@@ -39,7 +68,8 @@ Nx runs each root command against projects that expose its matching target.
 
 ```text
 apps/
-└── web/  # Angular application shell
+|-- api/  # NestJS API shell
+`-- web/  # Angular application shell
 ```
 
 Project decisions and domain vocabulary are recorded in
