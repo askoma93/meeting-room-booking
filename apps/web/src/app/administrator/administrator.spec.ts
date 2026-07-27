@@ -114,12 +114,26 @@ describe('Administrator controls', () => {
 
     clickButton(fixture.nativeElement, 'Edit Dnipro');
     fixture.detectChanges();
-    setInput(fixture.nativeElement, '#room-name', 'Dnipro Studio');
+    fillRoomForm(fixture.nativeElement, {
+      name: 'Dnipro Studio',
+      capacity: '6',
+      location: 'Floor 4 В· Test wing',
+      equipment: 'Projector, Speakerphone',
+    });
     clickButton(fixture.nativeElement, 'Save changes');
 
     const editRequest = http.expectOne('/api/rooms/room-1');
     expect(editRequest.request.method).toBe('PATCH');
-    editRequest.flush({ ...rooms[0], name: 'Dnipro Studio' });
+    expect(editRequest.request.body).toEqual({
+      name: 'Dnipro Studio',
+      capacity: 6,
+      location: 'Floor 4 В· Test wing',
+      equipment: ['Projector', 'Speakerphone'],
+    });
+    editRequest.flush({
+      ...rooms[0],
+      ...editRequest.request.body,
+    });
     fixture.detectChanges();
     expect(roomNames(fixture.nativeElement)).toContain('Dnipro Studio');
 
@@ -141,6 +155,19 @@ describe('Administrator controls', () => {
       name: 'Dnipro Studio',
       isActive: true,
     });
+    fixture.detectChanges();
+
+    clickButton(fixture.nativeElement, 'Edit Dnipro Studio');
+    fixture.detectChanges();
+    setInput(fixture.nativeElement, '#room-name', 'Discarded Room name');
+    clickButton(fixture.nativeElement, 'Cancel');
+    fixture.detectChanges();
+
+    expect(
+      (fixture.nativeElement.querySelector('#room-name') as HTMLInputElement)
+        .value,
+    ).toBe('');
+    expect(roomNames(fixture.nativeElement)).toContain('Dnipro Studio');
   });
 
   it('shows Booking Ownership and lets an Administrator cancel any Future Active Booking', () => {

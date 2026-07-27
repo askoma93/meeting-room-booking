@@ -1,0 +1,31 @@
+{
+  "name": "web-e2e",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "projectType": "application",
+  "sourceRoot": "apps/web-e2e/src",
+  "implicitDependencies": ["api", "web"],
+  "targets": {
+    "prepare-db": {
+      "cache": false,
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": ["npm run db:test:migrate", "npm run db:test:seed"],
+        "parallel": false
+      }
+    },
+    "e2e": {
+      "cache": false,
+      "dependsOn": ["prepare-db"],
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "playwright test --config apps/web-e2e/playwright.config.ts"
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc --noEmit --project apps/web-e2e/tsconfig.json"
+      }
+    }
+  }
+}

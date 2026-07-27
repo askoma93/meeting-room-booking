@@ -118,12 +118,16 @@ npm run db:test:start
 npm run db:test:migrate
 npm run db:test:seed
 npm test
+npx playwright install chromium
+npm run e2e
 npm run db:test:stop
 ```
 
 Future API integration tests should use `DATABASE_URL` from `.env.test` and
-reset their own data between cases. CI can use the same URL with a PostgreSQL
-service instead of Docker Compose.
+reset their own data between cases. The Playwright suite migrates and reseeds
+this dedicated test database before each run, uses run-unique test records, then
+starts the API and web development servers itself. CI uses the same URL with a
+PostgreSQL service instead of Docker Compose.
 
 Nx runs each root command against projects that expose its matching target.
 
@@ -132,6 +136,7 @@ Nx runs each root command against projects that expose its matching target.
 | `npm run lint`         | Lint every project with a `lint` target            |
 | `npm run typecheck`    | Type-check every project with a `typecheck` target |
 | `npm test`             | Test every project with a `test` target            |
+| `npm run e2e`          | Run the required Playwright browser journeys       |
 | `npm run build`        | Build every project with a `build` target          |
 | `npm run check`        | Run all four verification commands                 |
 | `npm run graph`        | Open the Nx project graph                          |

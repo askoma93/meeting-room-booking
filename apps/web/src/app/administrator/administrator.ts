@@ -54,7 +54,7 @@ import { BookingOversight } from './booking-oversight';
         </div>
 
         <div class="management-workspace">
-          <form class="room-form" (submit)="saveRoom($event)">
+          <form #roomForm class="room-form" (submit)="saveRoom($event)">
             <div class="form-heading">
               <div>
                 <p class="form-mode">
@@ -65,7 +65,11 @@ import { BookingOversight } from './booking-oversight';
                 </h2>
               </div>
               @if (editingRoom()) {
-                <button type="button" class="quiet" (click)="cancelEditing()">
+                <button
+                  type="button"
+                  class="quiet"
+                  (click)="cancelEditing(roomForm)"
+                >
                   Cancel
                 </button>
               }
@@ -77,7 +81,7 @@ import { BookingOversight } from './booking-oversight';
                 id="room-name"
                 name="name"
                 required
-                [value]="editingRoom()?.name ?? ''"
+                [attr.value]="editingRoom()?.name ?? null"
               />
             </label>
 
@@ -91,7 +95,7 @@ import { BookingOversight } from './booking-oversight';
                   min="1"
                   inputmode="numeric"
                   required
-                  [value]="editingRoom()?.capacity ?? ''"
+                  [attr.value]="editingRoom()?.capacity ?? null"
                 />
               </label>
 
@@ -101,7 +105,7 @@ import { BookingOversight } from './booking-oversight';
                   id="room-location"
                   name="location"
                   required
-                  [value]="editingRoom()?.location ?? ''"
+                  [attr.value]="editingRoom()?.location ?? null"
                 />
               </label>
             </div>
@@ -112,7 +116,7 @@ import { BookingOversight } from './booking-oversight';
                 id="room-equipment"
                 name="equipment"
                 placeholder="Display, Whiteboard"
-                [value]="editingRoom()?.equipment?.join(', ') ?? ''"
+                [attr.value]="editingRoom()?.equipment?.join(', ') ?? null"
               />
               <small>Separate items with commas.</small>
             </label>
@@ -273,9 +277,10 @@ export class Administrator implements OnInit {
     this.editingRoom.set(room);
   }
 
-  protected cancelEditing(): void {
+  protected cancelEditing(form: HTMLFormElement): void {
     this.editingRoom.set(null);
     this.formError.set('');
+    form.reset();
   }
 
   protected toggleActiveState(room: ManagedRoom): void {
