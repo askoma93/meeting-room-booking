@@ -44,6 +44,8 @@ export class BookingsService {
     }
 
     try {
+      validateFutureStart(startAt);
+
       return await this.prisma.booking.create({
         data: {
           userId,
@@ -63,18 +65,25 @@ export class BookingsService {
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2039' &&
-        error.message.includes('Booking_no_overlapping_active_bookings')
+        error.code === 'P2039'
       ) {
-        throw new ConflictException(bookingOverlapConflict);
-      }
+        if (error.message.includes('Booking_no_overlapping_active_bookings')) {
+          throw new ConflictException(bookingOverlapConflict);
+        }
 
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2039' &&
-        error.message.includes('Booking_active_room_guard')
-      ) {
-        throw new NotFoundException('Active Room not found.');
+        if (
+          error.message.includes(
+            'Future Active Bookings require an Active Room.',
+          )
+        ) {
+          throw new NotFoundException('Active Room not found.');
+        }
+
+        if (error.message.includes('Active Bookings require a future start.')) {
+          throw new BadRequestException(
+            'A Future Booking must start later than the current time.',
+          );
+        }
       }
 
       throw error;
@@ -83,11 +92,7 @@ export class BookingsService {
 }
 
 function validateTimeSlot(startAt: Date, endAt: Date): void {
-  if (startAt.getTime() <= Date.now()) {
-    throw new BadRequestException(
-      'A Future Booking must start later than the current time.',
-    );
-  }
+  validateFutureStart(startAt);
 
   if (
     startAt.getTime() % bookingGranularityMilliseconds !== 0 ||
@@ -114,6 +119,14 @@ function validateTimeSlot(startAt: Date, endAt: Date): void {
   if (!isSameLocalDay || !startsInsideBookingHours || !endsInsideBookingHours) {
     throw new BadRequestException(
       'A Booking must fit within Booking Hours from 08:00 to 20:00 Europe/Kyiv.',
+    );
+  }
+}
+
+function validateFutureStart(startAt: Date): void {
+  if (startAt.getTime() <= Date.now()) {
+    throw new BadRequestException(
+      'A Future Booking must start later than the current time.',
     );
   }
 }
