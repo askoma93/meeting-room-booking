@@ -9,7 +9,7 @@
   margin-top: 2rem;
 }
 
-.sign-in-form {
+.auth-form {
   padding: clamp(1.25rem, 4vw, 2rem);
   border: 1px solid #b9c9db;
   border-radius: 0.65rem;
@@ -17,14 +17,18 @@
   box-shadow: 0 1.2rem 3rem rgba(40, 70, 110, 0.06);
 }
 
-.sign-in-form h2,
+.auth-form h2,
 .access-note h2 {
   margin: 0;
   color: #10253f;
   font-family: 'Aptos Display', 'Segoe UI', sans-serif;
 }
 
-.sign-in-form label {
+.auth-form h2 {
+  margin-top: 1.5rem;
+}
+
+.auth-form label {
   display: grid;
   gap: 0.45rem;
   margin-top: 1rem;
@@ -33,7 +37,12 @@
   font-weight: 700;
 }
 
-.sign-in-form input {
+.optional-field {
+  color: #64758a;
+  font-weight: 500;
+}
+
+.auth-form input {
   min-height: 2.9rem;
   padding: 0.65rem 0.75rem;
   border: 1px solid #aebfd1;
@@ -42,12 +51,13 @@
   background: #fbfdff;
 }
 
-.sign-in-form input:focus {
+.auth-form input:focus,
+.auth-mode button:focus-visible {
   border-color: #245dce;
   outline: 0.18rem solid rgba(36, 93, 206, 0.16);
 }
 
-.sign-in-form button {
+.auth-form > button[type='submit'] {
   width: 100%;
   min-height: 2.9rem;
   margin-top: 1.25rem;
@@ -59,7 +69,7 @@
   cursor: pointer;
 }
 
-.sign-in-form button:disabled {
+.auth-form button:disabled {
   cursor: wait;
   opacity: 0.65;
 }
@@ -68,6 +78,42 @@
   margin: 1rem 0 0;
   color: #a52c2c;
   line-height: 1.5;
+}
+
+.auth-mode {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border: 1px solid #cbd8e6;
+  border-radius: 0.5rem;
+  background: #eef4fa;
+}
+
+.auth-mode legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.auth-mode button {
+  min-height: 2.45rem;
+  border: 0;
+  border-radius: 0.35rem;
+  color: #52677f;
+  background: transparent;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.auth-mode button.is-active {
+  color: #174cae;
+  background: #fff;
+  box-shadow: 0 0.2rem 0.7rem rgba(40, 70, 110, 0.1);
 }
 
 .access-note {
@@ -97,8 +143,39 @@
 }
 
 @media (max-width: 720px) {
+  .area-heading {
+    padding-bottom: 1.2rem;
+  }
+
+  .lede {
+    margin-top: 0.75rem;
+    line-height: 1.4;
+  }
+
   .auth-workspace {
     grid-template-columns: 1fr;
+    margin-top: 1rem;
+  }
+
+  .auth-form {
+    padding: 1rem;
+  }
+
+  .auth-form h2 {
+    margin-top: 1rem;
+  }
+
+  .auth-form label {
+    margin-top: 0.7rem;
+  }
+
+  .auth-form input {
+    min-height: 2.6rem;
+  }
+
+  .auth-form > button[type='submit'] {
+    min-height: 2.6rem;
+    margin-top: 0.9rem;
   }
 
   .access-note {

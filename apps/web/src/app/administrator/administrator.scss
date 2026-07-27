@@ -2,17 +2,21 @@
   width: min(100%, 88rem);
 }
 
-.management-state {
+.management-state,
+.roster-error {
   display: grid;
-  min-height: 19rem;
-  margin-top: 2rem;
   place-items: center;
-  align-content: center;
-  padding: 2rem;
   border: 1px dashed #aebfd1;
   border-radius: 0.65rem;
   color: #52677f;
   text-align: center;
+}
+
+.management-state {
+  min-height: 19rem;
+  margin-top: 2rem;
+  align-content: center;
+  padding: 2rem;
   background: rgba(255, 255, 255, 0.7);
 }
 
@@ -272,13 +276,7 @@ button:disabled {
 }
 
 .roster-error {
-  display: grid;
-  place-items: center;
   padding: 1.5rem;
-  border: 1px dashed #aebfd1;
-  border-radius: 0.65rem;
-  color: #52677f;
-  text-align: center;
 }
 
 @media (max-width: 920px) {

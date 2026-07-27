@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 
-interface AuthSession {
+export interface AuthSession {
   accessToken: string;
   user: {
     id: string;
@@ -14,6 +14,14 @@ interface AuthSession {
 @Injectable({ providedIn: 'root' })
 export class AuthApi {
   private readonly http = inject(HttpClient);
+
+  register(name: string, email: string, password: string) {
+    return this.http.post<AuthSession>('/api/auth/register', {
+      email,
+      password,
+      ...(name.trim() ? { name } : {}),
+    });
+  }
 
   login(email: string, password: string) {
     return this.http.post<AuthSession>('/api/auth/login', { email, password });
