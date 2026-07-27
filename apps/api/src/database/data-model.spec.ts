@@ -13,6 +13,17 @@ describe('persisted meeting room booking model', () => {
     expect(Object.values(UserRole)).toEqual(['USER', 'ADMINISTRATOR']);
   });
 
+  it('persists a password hash for email/password authentication', () => {
+    const administrator = {
+      name: 'Demo Administrator',
+      email: 'admin@example.com',
+      passwordHash: '$2b$12$example',
+      role: UserRole.ADMINISTRATOR,
+    } satisfies Prisma.UserCreateInput;
+
+    expect(administrator.passwordHash).toBe('$2b$12$example');
+  });
+
   it('represents Active and Cancelled Booking states', () => {
     expect(Object.values(BookingStatus)).toEqual(['ACTIVE', 'CANCELLED']);
   });

@@ -82,6 +82,14 @@ same records instead of creating duplicates. Seeded Booking timestamps are UTC,
 use 15-minute boundaries, and fall within the 08:00–20:00 Europe/Kyiv Booking
 Hours.
 
+The demo accounts share the password `Demo123!`:
+
+| Role          | Email                |
+| ------------- | -------------------- |
+| Administrator | `admin@example.com`  |
+| User          | `maksym@example.com` |
+| User          | `sofiia@example.com` |
+
 Committed Prisma migrations are SQL files and may contain hand-written
 PostgreSQL statements for constraints Prisma Schema Language cannot express.
 

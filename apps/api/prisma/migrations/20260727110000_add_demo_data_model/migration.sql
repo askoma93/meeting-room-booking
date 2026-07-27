@@ -4,11 +4,15 @@ CREATE TYPE "UserRole" AS ENUM ('USER', 'ADMINISTRATOR');
 -- CreateEnum
 CREATE TYPE "BookingStatus" AS ENUM ('ACTIVE', 'CANCELLED');
 
+-- EnableExtension
+CREATE EXTENSION IF NOT EXISTS "btree_gist";
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" UUID NOT NULL,
     "name" TEXT NOT NULL,
     "email" TEXT NOT NULL,
+    "passwordHash" TEXT NOT NULL,
     "role" "UserRole" NOT NULL DEFAULT 'USER',
     "createdAt" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMPTZ(3) NOT NULL,
@@ -83,3 +87,11 @@ ALTER TABLE "Booking" ADD CONSTRAINT "Booking_roomId_fkey" FOREIGN KEY ("roomId"
 
 -- AddForeignKey
 ALTER TABLE "Booking" ADD CONSTRAINT "Booking_cancelledByUserId_fkey" FOREIGN KEY ("cancelledByUserId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- Prevent overlapping half-open Time Slots for Active Bookings in one Room.
+ALTER TABLE "Booking" ADD CONSTRAINT "Booking_no_overlapping_active_bookings"
+EXCLUDE USING GIST (
+    "roomId" WITH =,
+    TSTZRANGE("startAt", "endAt", '[)') WITH &&
+)
+WHERE ("status" = 'ACTIVE');

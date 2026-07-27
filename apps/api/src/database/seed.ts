@@ -1,4 +1,5 @@
 import { PrismaPg } from '@prisma/adapter-pg';
+import { hash } from 'bcryptjs';
 import {
   BookingStatus,
   PrismaClient,
@@ -12,6 +13,8 @@ const connectionString =
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString }),
 });
+
+const demoPassword = 'Demo123!';
 
 const users = [
   {
@@ -98,13 +101,15 @@ function futureUtcTime(
 }
 
 async function seed(): Promise<void> {
+  const passwordHash = await hash(demoPassword, 12);
+
   await prisma.$transaction(async (transaction) => {
     const seededUsers = await Promise.all(
       users.map(({ id, ...user }) =>
         transaction.user.upsert({
           where: { email: user.email },
-          create: { id, ...user },
-          update: user,
+          create: { id, ...user, passwordHash },
+          update: { ...user, passwordHash },
         }),
       ),
     );
