@@ -174,6 +174,7 @@ Run the same checks represented in CI:
 ```bash
 npm run db:test:start
 npm run db:test:migrate
+npm run db:test:seed
 npm run lint
 npm run typecheck
 npm run test:unit

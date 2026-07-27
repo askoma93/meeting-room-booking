@@ -36,6 +36,8 @@ jobs:
         run: npm run db:generate
       - name: Apply test database migrations
         run: npm run db:test:migrate
+      - name: Seed API integration fixtures
+        run: npm run db:test:seed
       - name: Lint
         run: npm run lint
       - name: Typecheck
