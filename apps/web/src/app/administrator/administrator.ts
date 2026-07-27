@@ -2,8 +2,8 @@ import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { finalize } from 'rxjs';
 import {
   AdministratorApi,
+  EditableRoomFields,
   ManagedRoom,
-  RoomDetails,
 } from './administrator-api';
 
 @Component({
@@ -290,7 +290,7 @@ export class Administrator implements OnInit {
       });
   }
 
-  private roomDetailsFrom(form: HTMLFormElement): RoomDetails {
+  private roomDetailsFrom(form: HTMLFormElement): EditableRoomFields {
     const data = new FormData(form);
     return {
       name: data.get('name')?.toString().trim() ?? '',

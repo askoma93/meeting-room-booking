@@ -3,11 +3,20 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { BookingStatus } from '../../generated/prisma/client';
+import { BookingStatus, Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import type { CreateRoomDto } from './dto/create-room.dto';
 import type { ListRoomsQueryDto } from './dto/list-rooms-query.dto';
 import type { UpdateRoomDto } from './dto/update-room.dto';
+
+const managedRoomSelect = {
+  id: true,
+  name: true,
+  capacity: true,
+  location: true,
+  equipment: true,
+  isActive: true,
+} satisfies Prisma.RoomSelect;
 
 @Injectable()
 export class RoomsService {
@@ -40,14 +49,7 @@ export class RoomsService {
 
   listRoomsForManagement() {
     return this.prisma.room.findMany({
-      select: {
-        id: true,
-        name: true,
-        capacity: true,
-        location: true,
-        equipment: true,
-        isActive: true,
-      },
+      select: managedRoomSelect,
       orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
     });
   }
@@ -55,14 +57,7 @@ export class RoomsService {
   createRoom(room: CreateRoomDto) {
     return this.prisma.room.create({
       data: room,
-      select: {
-        id: true,
-        name: true,
-        capacity: true,
-        location: true,
-        equipment: true,
-        isActive: true,
-      },
+      select: managedRoomSelect,
     });
   }
 
@@ -92,17 +87,23 @@ export class RoomsService {
       }
     }
 
-    return this.prisma.room.update({
-      where: { id: roomId },
-      data: changes,
-      select: {
-        id: true,
-        name: true,
-        capacity: true,
-        location: true,
-        equipment: true,
-        isActive: true,
-      },
-    });
+    try {
+      return await this.prisma.room.update({
+        where: { id: roomId },
+        data: changes,
+        select: managedRoomSelect,
+      });
+    } catch (error: unknown) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2004'
+      ) {
+        throw new ConflictException(
+          'Room cannot be deactivated while it has future Active Bookings.',
+        );
+      }
+
+      throw error;
+    }
   }
 }

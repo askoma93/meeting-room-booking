@@ -10,7 +10,7 @@ export interface ManagedRoom {
   isActive: boolean;
 }
 
-export interface RoomDetails {
+export interface EditableRoomFields {
   name: string;
   capacity: number;
   location: string;
@@ -27,7 +27,7 @@ export class AdministratorApi {
     });
   }
 
-  createRoom(room: RoomDetails) {
+  createRoom(room: EditableRoomFields) {
     return this.http.post<ManagedRoom>('/api/rooms', room, {
       headers: this.authorizationHeaders(),
     });
@@ -35,7 +35,7 @@ export class AdministratorApi {
 
   updateRoom(
     roomId: string,
-    changes: Partial<RoomDetails & { isActive: boolean }>,
+    changes: Partial<EditableRoomFields & { isActive: boolean }>,
   ) {
     return this.http.patch<ManagedRoom>(`/api/rooms/${roomId}`, changes, {
       headers: this.authorizationHeaders(),

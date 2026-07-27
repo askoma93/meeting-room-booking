@@ -24,6 +24,7 @@ describe('Rooms API', () => {
     'API Managed Room',
     'API Managed Room Updated',
     'API Deactivation Guard',
+    'API Concurrent Deactivation',
   ];
 
   beforeAll(async () => {
@@ -284,6 +285,55 @@ describe('Rooms API', () => {
     ).resolves.toMatchObject({ isActive: true });
   });
 
+  it('serializes concurrent deactivation and future Active Booking creation', async () => {
+    const room = await prisma.room.create({
+      data: {
+        name: 'API Concurrent Deactivation',
+        capacity: 6,
+        location: 'Floor 2',
+        equipment: [],
+      },
+    });
+    let releaseDeactivation!: () => void;
+    let deactivationStarted!: () => void;
+    const holdDeactivation = new Promise<void>(
+      (resolve) => (releaseDeactivation = resolve),
+    );
+    const deactivationHasRoomLock = new Promise<void>(
+      (resolve) => (deactivationStarted = resolve),
+    );
+
+    const deactivation = prisma.$transaction(async (transaction) => {
+      await transaction.room.update({
+        where: { id: room.id },
+        data: { isActive: false },
+      });
+      deactivationStarted();
+      await holdDeactivation;
+    });
+    await deactivationHasRoomLock;
+
+    const bookingOutcome = prisma.booking
+      .create({
+        data: {
+          roomId: room.id,
+          userId: registeredUserId,
+          startAt: new Date(Date.now() + 3 * 60 * 60 * 1000),
+          endAt: new Date(Date.now() + 4 * 60 * 60 * 1000),
+        },
+      })
+      .then(() => 'created' as const)
+      .catch(() => 'rejected' as const);
+
+    releaseDeactivation();
+    await deactivation;
+
+    await expect(bookingOutcome).resolves.toBe('rejected');
+    await expect(
+      prisma.room.findUniqueOrThrow({ where: { id: room.id } }),
+    ).resolves.toMatchObject({ isActive: false });
+  });
+
   function getRooms(query = ''): Promise<Response> {
     return fetch(`${baseUrl}/api/rooms${query}`, {
       headers: userHeaders(),
@@ -291,15 +341,16 @@ describe('Rooms API', () => {
   }
 
   function userHeaders(): Record<string, string> {
-    return {
-      authorization: `Bearer ${userAccessToken}`,
-      'content-type': 'application/json',
-    };
+    return authorizationHeaders(userAccessToken);
   }
 
   function administratorHeaders(): Record<string, string> {
+    return authorizationHeaders(administratorAccessToken);
+  }
+
+  function authorizationHeaders(accessToken: string): Record<string, string> {
     return {
-      authorization: `Bearer ${administratorAccessToken}`,
+      authorization: `Bearer ${accessToken}`,
       'content-type': 'application/json',
     };
   }
