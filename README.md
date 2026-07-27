@@ -1,5 +1,7 @@
 # Meeting Room Booking
 
+[![CI](https://github.com/askoma93/meeting-room-booking/actions/workflows/ci.yml/badge.svg)](https://github.com/askoma93/meeting-room-booking/actions/workflows/ci.yml)
+
 Meeting Room Booking is a reviewer-ready portfolio application for reserving
 shared meeting rooms. It demonstrates a complete Angular and NestJS workflow:
 authenticated users can inspect room availability, create and cancel their own

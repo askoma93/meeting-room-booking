@@ -21,7 +21,7 @@ async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/auth');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(demoPassword);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.locator('form button[type="submit"]').click();
 
   await expect(page).toHaveURL(/\/rooms$/);
   await expect(
@@ -89,6 +89,33 @@ function futureOfficeDate(daysAhead: number): string {
   );
   return futureDate.toISOString().slice(0, 10);
 }
+
+test('a visitor registers, signs out, and signs back in', async ({ page }) => {
+  const email = `e2e-user-${runIdentifier}@example.com`;
+
+  await page.goto('/auth');
+  await page.getByRole('button', { name: 'Register' }).click();
+  await page.getByLabel('Name').fill('E2E Reviewer');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(demoPassword);
+  await page.locator('form button[type="submit"]').click();
+
+  await expect(page).toHaveURL(/\/rooms$/);
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Rooms' }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await expect(page).toHaveURL(/\/auth$/);
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Sign in' }),
+  ).toBeVisible();
+
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(demoPassword);
+  await page.locator('form button[type="submit"]').click();
+  await expect(page).toHaveURL(/\/rooms$/);
+});
 
 test('a User creates a Booking, sees an overlap rejected, and cancels their Future Booking', async ({
   page,
