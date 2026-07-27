@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { BookingStatus, Prisma } from '../../generated/prisma/client';
+import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import type { CreateRoomDto } from './dto/create-room.dto';
 import type { ListRoomsQueryDto } from './dto/list-rooms-query.dto';
@@ -17,6 +17,9 @@ const managedRoomSelect = {
   equipment: true,
   isActive: true,
 } satisfies Prisma.RoomSelect;
+
+const roomDeactivationConflict =
+  'Room cannot be deactivated while it has future Active Bookings.';
 
 @Injectable()
 export class RoomsService {
@@ -71,22 +74,6 @@ export class RoomsService {
       throw new NotFoundException('Room not found.');
     }
 
-    if (room.isActive && changes.isActive === false) {
-      const futureActiveBookingCount = await this.prisma.booking.count({
-        where: {
-          roomId,
-          status: BookingStatus.ACTIVE,
-          startAt: { gt: new Date() },
-        },
-      });
-
-      if (futureActiveBookingCount > 0) {
-        throw new ConflictException(
-          'Room cannot be deactivated while it has future Active Bookings.',
-        );
-      }
-    }
-
     try {
       return await this.prisma.room.update({
         where: { id: roomId },
@@ -96,11 +83,10 @@ export class RoomsService {
     } catch (error: unknown) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2004'
+        error.code === 'P2039' &&
+        error.message.includes(roomDeactivationConflict)
       ) {
-        throw new ConflictException(
-          'Room cannot be deactivated while it has future Active Bookings.',
-        );
+        throw new ConflictException(roomDeactivationConflict);
       }
 
       throw error;
