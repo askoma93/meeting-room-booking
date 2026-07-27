@@ -17,6 +17,7 @@ Bookings, and Administrator flows.
 npm ci
 npm run db:start
 npm run db:migrate
+npm run db:seed
 npm run check
 ```
 
@@ -72,10 +73,15 @@ schema.
 | `npm run db:validate`    | Validate the Prisma configuration and schema           |
 | `npm run db:migrate`     | Apply committed migrations to the development database |
 | `npm run db:migrate:dev` | Create and apply a migration while changing the schema |
+| `npm run db:seed`        | Upsert the repeatable demo data                        |
 | `npm run db:stop`        | Stop the local development PostgreSQL service          |
 
-The initial migration intentionally contains no domain tables. It establishes
-the migration history before Users, Rooms, and Bookings are introduced.
+The demo seed creates one Administrator, two regular Users, six Rooms, and a
+mix of future Active and Cancelled Bookings. Re-running the command updates the
+same records instead of creating duplicates. Seeded Booking timestamps are UTC,
+use 15-minute boundaries, and fall within the 08:00–20:00 Europe/Kyiv Booking
+Hours.
+
 Committed Prisma migrations are SQL files and may contain hand-written
 PostgreSQL statements for constraints Prisma Schema Language cannot express.
 
@@ -88,6 +94,7 @@ temporary filesystem, and does not share state with development:
 cp apps/api/.env.test.example apps/api/.env.test
 npm run db:test:start
 npm run db:test:migrate
+npm run db:test:seed
 npm test
 npm run db:test:stop
 ```
