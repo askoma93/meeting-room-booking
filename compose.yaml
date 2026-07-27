@@ -15,6 +15,73 @@ services:
       timeout: 5s
       retries: 10
 
+  migrate:
+    profiles: ['tools']
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      target: database
+    environment:
+      DATABASE_URL: postgresql://meeting_room:meeting_room@postgres:5432/meeting_room_booking?schema=public
+    command: npm run db:migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  seed:
+    profiles: ['tools']
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      target: database
+    environment:
+      DATABASE_URL: postgresql://meeting_room:meeting_room@postgres:5432/meeting_room_booking?schema=public
+    command: npm run db:seed
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      target: runtime
+    environment:
+      DATABASE_URL: postgresql://meeting_room:meeting_room@postgres:5432/meeting_room_booking?schema=public
+      JWT_SECRET: docker-demo-jwt-secret-with-at-least-32-characters
+      PORT: 3000
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://localhost:3000/api/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    ports:
+      - '4200:80'
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--spider', 'http://localhost/']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   postgres-test:
     image: postgres:17-alpine
     profiles: ['test']

@@ -1,154 +1,204 @@
 # Meeting Room Booking
 
-Meeting Room Booking is being built as an Nx monorepo for an Angular web
-application and a NestJS API backed by PostgreSQL through Prisma. The Angular
-shell currently provides the route-level home for authentication, Rooms, My
-Bookings, and Administrator flows.
+Meeting Room Booking is a reviewer-ready portfolio application for reserving
+shared meeting rooms. It demonstrates a complete Angular and NestJS workflow:
+authenticated users can inspect room availability, create and cancel their own
+future Bookings, while Administrators manage Rooms and oversee all Bookings.
 
-## Requirements
+The project is intentionally small enough to review in one sitting while still
+showing production-minded choices: PostgreSQL constraints protect scheduling
+rules, authorization is enforced by the API, database changes are explicit,
+and required user journeys run in a real browser in CI.
 
-- Node.js 22.12 or newer (an even-numbered LTS release is recommended)
-- npm 11
+## What to review
+
+- **Domain behavior:** half-open Time Slots, 15-minute Booking Granularity,
+  08:00–20:00 Europe/Kyiv Booking Hours, overlap protection, Booking Ownership,
+  Administrative Cancellation, and the Room Deactivation Guard.
+- **Backend:** NestJS modules expose authentication, Rooms, availability, and
+  Bookings through a validated REST API.
+- **Data integrity:** Prisma handles the application model while committed
+  PostgreSQL migrations add constraints that are stronger than UI validation.
+- **Frontend:** the Angular app covers User and Administrator journeys with
+  responsive room, booking, and management views.
+- **Verification:** Jest/Vitest cover API and component behavior; Playwright
+  exercises the required end-to-end journeys against PostgreSQL.
+
+Architecture and domain decisions are recorded in
+[`CONTEXT.md`](./CONTEXT.md) and [`docs/adr`](./docs/adr).
+
+## Fastest evaluation: Docker Compose
+
+Requirements: Docker with Docker Compose.
+
+From a clean checkout, build the images, start PostgreSQL, and then run the
+schema and demo-data steps explicitly:
+
+```bash
+docker compose build api web migrate seed
+docker compose up -d postgres
+docker compose run --rm migrate
+docker compose run --rm seed
+docker compose up -d api web
+```
+
+Open <http://localhost:4200>. The API health endpoint is available at
+<http://localhost:3000/api/health>. `docker compose ps` should show PostgreSQL,
+the API, and the web app as healthy.
+
+The migration and seed commands are deliberately separate from container
+startup. Re-running them is safe: committed migrations apply once and the demo
+seed upserts stable records.
+
+Stop the application with:
+
+```bash
+docker compose down
+```
+
+Add `--volumes` only when you also want to discard the local development
+database.
+
+## Demo accounts
+
+All demo accounts use the password `Demo123!`.
+
+| Role          | Email                | Suggested review path                    |
+| ------------- | -------------------- | ---------------------------------------- |
+| Administrator | `admin@example.com`  | Manage Rooms and inspect every Booking   |
+| User          | `maksym@example.com` | Create a Booking and view My Bookings    |
+| User          | `sofiia@example.com` | Compare occupied slots with owned detail |
+
+## Architecture
+
+```text
+Browser
+  |
+  v
+Angular web app / Nginx (:4200)
+  |  /api
+  v
+NestJS REST API (:3000)
+  |
+  v
+PostgreSQL 17 (:5432)
+```
+
+The Nx monorepo contains:
+
+```text
+apps/
+|-- api/      # NestJS API, Prisma schema, migrations, and seed
+|-- web/      # Angular application
+`-- web-e2e/  # Playwright reviewer journeys
+```
+
+The web container serves the production Angular build and proxies `/api` to the
+API container. Local Angular development uses the equivalent proxy in
+`apps/web/proxy.conf.json`.
+
+## Domain rules worth inspecting
+
+- A Time Slot is half-open: a Booking ending at 10:00 does not overlap one
+  starting at 10:00.
+- Bookings start and end on 15-minute boundaries, last at least 15 minutes, fit
+  fully within 08:00–20:00 Europe/Kyiv, and start in the future.
+- Only Active Bookings occupy a Room and participate in overlap checks.
+- Users can cancel only their own Future Active Bookings; Administrators can
+  cancel any Future Active Booking.
+- Other users' occupied slots are visible without exposing Booking Ownership.
+- An Active Room cannot be deactivated while it has Future Active Bookings.
+- Cancelled Bookings remain as history with a Cancellation Record.
+
+## Local development
+
+Requirements:
+
+- Node.js 22.12 or newer
+- npm 11.6.2
 - Docker with Docker Compose
 
-## Setup
+Install dependencies and create local environment files:
 
 ```bash
 npm ci
-npm run db:start
-npm run db:migrate
-npm run db:seed
-npm run check
+cp apps/api/.env.example apps/api/.env.local
+cp apps/api/.env.test.example apps/api/.env.test
 ```
 
-`db:start` starts PostgreSQL 17 at `localhost:5432`. The development database
-uses a named Docker volume, so its data survives container restarts. Check its
-health with `docker compose ps`, and stop it with `npm run db:stop`.
-
-Start the Angular app at `http://localhost:4200`:
+Start and prepare the development database:
 
 ```bash
-npx nx serve web
+npm run db:start
+npm run db:generate
+npm run db:migrate
+npm run db:seed
 ```
 
-Start the NestJS API at `http://localhost:3000/api`:
+Run the API and web app in separate terminals:
 
 ```bash
 npx nx serve api
+npx nx serve web
 ```
 
-Check that the API is running:
+The web app is at <http://localhost:4200>; the REST API is rooted at
+<http://localhost:3000/api>.
+
+The API reads `apps/api/.env.local` before `apps/api/.env`. Tests read
+`apps/api/.env.test` before `apps/api/.env`. `JWT_SECRET` must be at least 32
+characters and should be replaced with a random secret outside local review.
+
+## Database commands
+
+Migrations never run implicitly when an application container starts.
+
+| Command                   | Purpose                                                |
+| ------------------------- | ------------------------------------------------------ |
+| `npm run db:start`        | Start development PostgreSQL at `localhost:5432`       |
+| `npm run db:generate`     | Generate the Prisma Client                             |
+| `npm run db:validate`     | Validate Prisma configuration and schema               |
+| `npm run db:migrate`      | Apply committed development migrations                 |
+| `npm run db:migrate:dev`  | Create and apply a migration while changing the schema |
+| `npm run db:seed`         | Upsert repeatable demo data                            |
+| `npm run db:stop`         | Stop development PostgreSQL                            |
+| `npm run db:test:start`   | Start isolated test PostgreSQL at `localhost:5433`     |
+| `npm run db:test:migrate` | Apply migrations to the test database                  |
+| `npm run db:test:seed`    | Upsert test demo data                                  |
+| `npm run db:test:stop`    | Stop test PostgreSQL                                   |
+
+## Verification
+
+Run the same checks represented in CI:
 
 ```bash
-curl http://localhost:3000/api/health
-```
-
-The response is `{"status":"ok"}`.
-
-## Environment configuration
-
-The API reads local settings from `apps/api/.env.local` first and then
-`apps/api/.env`. Tests read `apps/api/.env.test` first and then
-`apps/api/.env`. All of these files are ignored by Git.
-
-Copy the tracked example before starting the API:
-
-```bash
-cp apps/api/.env.example apps/api/.env.local
-```
-
-`PORT` defaults to `3000`. `DATABASE_URL` is required by the API and points at
-the development PostgreSQL service in the tracked example. `JWT_SECRET` signs
-one-hour access tokens and must be replaced with a random value of at least 32
-characters outside tests.
-
-## Authentication API
-
-Registering always creates a regular User, even if a caller supplies additional
-role fields. Pass the returned access token as
-`Authorization: Bearer <accessToken>` when calling protected routes.
-
-| Method | Route                | Access        | Purpose                            |
-| ------ | -------------------- | ------------- | ---------------------------------- |
-| POST   | `/api/auth/register` | Public        | Register with email/password       |
-| POST   | `/api/auth/login`    | Public        | Start a User/Administrator session |
-| GET    | `/api/auth/me`       | Authenticated | Read the current session user      |
-
-## Database workflow
-
-Prisma's schema, configuration, and migrations live under `apps/api`. Migrations
-are always run explicitly; starting a container never changes the database
-schema.
-
-| Command                  | Purpose                                                |
-| ------------------------ | ------------------------------------------------------ |
-| `npm run db:start`       | Start the local development PostgreSQL service         |
-| `npm run db:generate`    | Generate the type-safe Prisma Client                   |
-| `npm run db:validate`    | Validate the Prisma configuration and schema           |
-| `npm run db:migrate`     | Apply committed migrations to the development database |
-| `npm run db:migrate:dev` | Create and apply a migration while changing the schema |
-| `npm run db:seed`        | Upsert the repeatable demo data                        |
-| `npm run db:stop`        | Stop the local development PostgreSQL service          |
-
-The demo seed creates one Administrator, two regular Users, six Rooms, and a
-mix of future Active and Cancelled Bookings. Re-running the command updates the
-same records instead of creating duplicates. Seeded Booking timestamps are UTC,
-use 15-minute boundaries, and fall within the 08:00–20:00 Europe/Kyiv Booking
-Hours.
-
-The demo accounts share the password `Demo123!`:
-
-| Role          | Email                |
-| ------------- | -------------------- |
-| Administrator | `admin@example.com`  |
-| User          | `maksym@example.com` |
-| User          | `sofiia@example.com` |
-
-Committed Prisma migrations are SQL files and may contain hand-written
-PostgreSQL statements for constraints Prisma Schema Language cannot express.
-
-### PostgreSQL integration tests
-
-The isolated test service listens at `localhost:5433`, stores its data in a
-temporary filesystem, and does not share state with development:
-
-```bash
-cp apps/api/.env.test.example apps/api/.env.test
 npm run db:test:start
 npm run db:test:migrate
-npm run db:test:seed
-npm test
+npm run lint
+npm run typecheck
+npm run test:unit
+npm run test:api
+npm run build
 npx playwright install chromium
 npm run e2e
 npm run db:test:stop
 ```
 
-Future API integration tests should use `DATABASE_URL` from `.env.test` and
-reset their own data between cases. The Playwright suite migrates and reseeds
-this dedicated test database before each run, uses run-unique test records, then
-starts the API and web development servers itself. CI uses the same URL with a
-PostgreSQL service instead of Docker Compose.
+The API tests and Playwright suite use the isolated PostgreSQL service. The
+Playwright target migrates and reseeds that database, starts the API and Angular
+development servers, and uses run-unique records.
 
-Nx runs each root command against projects that expose its matching target.
+Convenience commands:
 
-| Command                | Purpose                                            |
-| ---------------------- | -------------------------------------------------- |
-| `npm run lint`         | Lint every project with a `lint` target            |
-| `npm run typecheck`    | Type-check every project with a `typecheck` target |
-| `npm test`             | Test every project with a `test` target            |
-| `npm run e2e`          | Run the required Playwright browser journeys       |
-| `npm run build`        | Build every project with a `build` target          |
-| `npm run check`        | Run all four verification commands                 |
-| `npm run graph`        | Open the Nx project graph                          |
-| `npm run format:check` | Check formatting for files selected by Nx          |
+| Command                | Purpose                                  |
+| ---------------------- | ---------------------------------------- |
+| `npm test`             | Run all API and frontend tests           |
+| `npm run e2e`          | Run required Playwright browser journeys |
+| `npm run check`        | Lint, typecheck, test, and build         |
+| `npm run format:check` | Check formatting for Nx-selected files   |
+| `npm run graph`        | Inspect the Nx project graph             |
 
-## Current workspace
-
-```text
-apps/
-|-- api/  # NestJS API shell
-`-- web/  # Angular application shell
-```
-
-Project decisions and domain vocabulary are recorded in
-[`CONTEXT.md`](./CONTEXT.md) and [`docs/adr`](./docs/adr).
+GitHub Actions installs from the lockfile, generates Prisma, migrates a
+PostgreSQL service, runs lint and typechecking, separates frontend unit tests
+from API integration tests, builds both applications, and finishes with the
+required Chromium journeys.

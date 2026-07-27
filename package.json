@@ -10,6 +10,8 @@
     "lint": "nx run-many -t lint",
     "typecheck": "nx run-many -t typecheck",
     "test": "nx run-many -t test",
+    "test:unit": "nx run web:test",
+    "test:api": "nx run api:test",
     "e2e": "nx run web-e2e:e2e",
     "build": "nx run-many -t build",
     "check": "npm run lint && npm run typecheck && npm test && npm run build",
