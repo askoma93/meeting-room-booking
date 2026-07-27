@@ -39,6 +39,17 @@
   font-family: 'Aptos Display', 'Segoe UI', sans-serif;
 }
 
+.room-card h3 a {
+  color: inherit;
+  text-decoration-color: #8db5ff;
+  text-decoration-thickness: 0.12rem;
+  text-underline-offset: 0.2rem;
+}
+
+.room-card h3 a:hover {
+  color: #245dce;
+}
+
 .filter-heading h2 {
   font-size: 1.05rem;
 }

@@ -19,6 +19,7 @@ describe('Rooms API', () => {
     'API Fails Equipment',
     'API Fails Location',
     'API Inactive Match',
+    'API Availability Room',
   ];
   const managedRoomNames = [
     'API Managed Room',
@@ -77,6 +78,13 @@ describe('Rooms API', () => {
           equipment: ['Display', 'Video conferencing'],
           isActive: false,
         },
+        {
+          name: roomNames[5],
+          capacity: 6,
+          location: 'Floor 2 · Focus wing',
+          equipment: ['Display'],
+          isActive: true,
+        },
       ],
     });
 
@@ -111,7 +119,9 @@ describe('Rooms API', () => {
 
   afterAll(async () => {
     await prisma.booking.deleteMany({
-      where: { room: { name: { in: managedRoomNames } } },
+      where: {
+        room: { name: { in: [...roomNames, ...managedRoomNames] } },
+      },
     });
     await prisma.room.deleteMany({
       where: { name: { in: [...roomNames, ...managedRoomNames] } },
@@ -148,6 +158,59 @@ describe('Rooms API', () => {
     expect(rooms.map((room) => room.name)).not.toEqual(
       expect.arrayContaining(roomNames.slice(1)),
     );
+  });
+
+  it('returns only occupied Time Slots for an Active Room on the selected Kyiv date', async () => {
+    const room = await prisma.room.findUniqueOrThrow({
+      where: { name: roomNames[5] },
+    });
+    const occupiedStart = new Date();
+    occupiedStart.setUTCDate(occupiedStart.getUTCDate() + 7);
+    occupiedStart.setUTCHours(9, 0, 0, 0);
+    const occupiedEnd = new Date(occupiedStart.getTime() + 30 * 60 * 1000);
+    const cancelledStart = new Date(
+      occupiedStart.getTime() + 60 * 60 * 1000,
+    );
+    const cancelledEnd = new Date(cancelledStart.getTime() + 30 * 60 * 1000);
+
+    await prisma.booking.createMany({
+      data: [
+        {
+          roomId: room.id,
+          userId: registeredUserId,
+          startAt: occupiedStart,
+          endAt: occupiedEnd,
+        },
+        {
+          roomId: room.id,
+          userId: registeredUserId,
+          startAt: cancelledStart,
+          endAt: cancelledEnd,
+          status: 'CANCELLED',
+          cancelledAt: new Date(),
+          cancelledByUserId: registeredUserId,
+        },
+      ],
+    });
+
+    const selectedDate = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Europe/Kyiv',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(occupiedStart);
+    const response = await fetch(
+      `${baseUrl}/api/rooms/${room.id}/availability?date=${selectedDate}`,
+      { headers: userHeaders() },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual([
+      {
+        startAt: occupiedStart.toISOString(),
+        endAt: occupiedEnd.toISOString(),
+      },
+    ]);
   });
 
   it('lets an Administrator create, edit, deactivate, and reactivate a Room without deleting it', async () => {

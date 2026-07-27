@@ -11,6 +11,7 @@ import { UserRole } from '../../generated/prisma/client';
 import { Roles } from '../auth/roles.decorator';
 import { CreateRoomDto } from './dto/create-room.dto';
 import { ListRoomsQueryDto } from './dto/list-rooms-query.dto';
+import { RoomAvailabilityQueryDto } from './dto/room-availability-query.dto';
 import { UpdateRoomDto } from './dto/update-room.dto';
 import { RoomsService } from './rooms.service';
 
@@ -27,6 +28,19 @@ export class RoomsController {
   @Get()
   listActiveRooms(@Query() query: ListRoomsQueryDto) {
     return this.roomsService.listActiveRooms(query);
+  }
+
+  @Get(':roomId/availability')
+  getRoomAvailability(
+    @Param('roomId') roomId: string,
+    @Query() query: RoomAvailabilityQueryDto,
+  ) {
+    return this.roomsService.getRoomAvailability(roomId, query.date);
+  }
+
+  @Get(':roomId')
+  getActiveRoom(@Param('roomId') roomId: string) {
+    return this.roomsService.getActiveRoom(roomId);
   }
 
   @Post()

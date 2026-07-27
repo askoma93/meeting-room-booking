@@ -105,7 +105,9 @@ import { RoomFilters, RoomSummary, RoomsApi } from './rooms-api';
                     <span class="room-index">
                       Room {{ (index + 1).toString().padStart(2, '0') }}
                     </span>
-                    <h3 data-testid="room-name">{{ room.name }}</h3>
+                    <h3 data-testid="room-name">
+                      <a [routerLink]="['/rooms', room.id]">{{ room.name }}</a>
+                    </h3>
                     <p class="location">{{ room.location }}</p>
                   </div>
                   <div class="capacity">

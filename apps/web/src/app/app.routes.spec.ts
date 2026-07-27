@@ -18,6 +18,14 @@ describe('app routes', () => {
     ).toContain('Rooms');
   });
 
+  it('opens a Room detail booking page', async () => {
+    const harness = await RouterTestingHarness.create('/rooms/room-1');
+
+    expect(
+      harness.routeNativeElement?.querySelector('h1')?.textContent,
+    ).toContain('Room');
+  });
+
   it('redirects the workspace entry route to Rooms', async () => {
     const harness = await RouterTestingHarness.create('/');
 

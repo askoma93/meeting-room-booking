@@ -3,6 +3,7 @@ import { Administrator } from './administrator/administrator';
 import { Auth } from './auth/auth';
 import { MyBookings } from './my-bookings/my-bookings';
 import { Rooms } from './rooms/rooms';
+import { RoomDetail } from './rooms/room-detail';
 
 export const appRoutes: Route[] = [
   {
@@ -19,6 +20,11 @@ export const appRoutes: Route[] = [
     path: 'rooms',
     component: Rooms,
     title: 'Rooms · Room board',
+  },
+  {
+    path: 'rooms/:roomId',
+    component: RoomDetail,
+    title: 'Room availability · Room board',
   },
   {
     path: 'my-bookings',

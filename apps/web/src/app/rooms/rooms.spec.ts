@@ -4,6 +4,7 @@ import {
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { Rooms } from './rooms';
 
 describe('Rooms', () => {
@@ -28,7 +29,11 @@ describe('Rooms', () => {
     localStorage.setItem('mrb.accessToken', 'test-access-token');
     TestBed.configureTestingModule({
       imports: [Rooms],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        provideRouter([]),
+      ],
     });
   });
 
