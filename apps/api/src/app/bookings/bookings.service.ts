@@ -4,8 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '../../generated/prisma/client';
+import { Prisma, UserRole } from '../../generated/prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import type { AuthenticatedUser } from '../auth/auth.types';
 import type { CreateBookingDto } from './dto/create-booking.dto';
 
 const bookingGranularityMilliseconds = 15 * 60 * 1000;
@@ -30,6 +31,23 @@ const bookingDetailsSelect = {
     select: {
       name: true,
       location: true,
+    },
+  },
+} satisfies Prisma.BookingSelect;
+const managedBookingDetailsSelect = {
+  ...bookingDetailsSelect,
+  user: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
+    },
+  },
+  cancelledBy: {
+    select: {
+      id: true,
+      name: true,
+      email: true,
     },
   },
 } satisfies Prisma.BookingSelect;
@@ -118,25 +136,42 @@ export class BookingsService {
     );
   }
 
-  async cancelMyBooking(userId: string, bookingId: string) {
+  async listBookingsForManagement() {
+    const checkedAt = new Date();
+    const bookings = await this.prisma.booking.findMany({
+      select: managedBookingDetailsSelect,
+      orderBy: { startAt: 'asc' },
+    });
+
+    return bookings.map((booking) =>
+      withCancellationEligibility(booking, checkedAt),
+    );
+  }
+
+  async cancelBooking(
+    user: Pick<AuthenticatedUser, 'id' | 'role'>,
+    bookingId: string,
+  ) {
     const cancelledAt = new Date();
+    const bookingAccessFilter =
+      user.role === UserRole.ADMINISTRATOR ? {} : { userId: user.id };
     const cancellation = await this.prisma.booking.updateMany({
       where: {
         id: bookingId,
-        userId,
+        ...bookingAccessFilter,
         status: 'ACTIVE',
         startAt: { gt: cancelledAt },
       },
       data: {
         status: 'CANCELLED',
         cancelledAt,
-        cancelledByUserId: userId,
+        cancelledByUserId: user.id,
       },
     });
 
     if (cancellation.count === 0) {
       const booking = await this.prisma.booking.findFirst({
-        where: { id: bookingId, userId },
+        where: { id: bookingId, ...bookingAccessFilter },
         select: { status: true, startAt: true },
       });
 
@@ -151,10 +186,16 @@ export class BookingsService {
       );
     }
 
-    const booking = await this.prisma.booking.findUniqueOrThrow({
-      where: { id: bookingId },
-      select: bookingDetailsSelect,
-    });
+    const booking =
+      user.role === UserRole.ADMINISTRATOR
+        ? await this.prisma.booking.findUniqueOrThrow({
+            where: { id: bookingId },
+            select: managedBookingDetailsSelect,
+          })
+        : await this.prisma.booking.findUniqueOrThrow({
+            where: { id: bookingId },
+            select: bookingDetailsSelect,
+          });
 
     return withCancellationEligibility(booking, cancelledAt);
   }

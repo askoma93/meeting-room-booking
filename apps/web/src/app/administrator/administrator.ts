@@ -5,8 +5,10 @@ import {
   EditableRoomFields,
   ManagedRoom,
 } from './administrator-api';
+import { BookingOversight } from './booking-oversight';
 
 @Component({
+  imports: [BookingOversight],
   selector: 'mrb-administrator',
   styleUrl: './administrator.scss',
   template: `
@@ -17,9 +19,10 @@ import {
       <header class="area-heading">
         <div>
           <p class="eyebrow">Office operations</p>
-          <h1 id="administrator-title">Administrator room control</h1>
+          <h1 id="administrator-title">Administrator control room</h1>
           <p class="lede">
-            Keep the office roster accurate without losing a Room's history.
+            Keep the Room roster accurate and oversee every Booking from one
+            operational view.
           </p>
         </div>
         <span class="area-code" aria-hidden="true">ADMIN / 03</span>
@@ -35,8 +38,8 @@ import {
           <span class="state-mark" aria-hidden="true">403</span>
           <h2>Administrator access required</h2>
           <p>
-            Room management is available only to Administrators. Sign in with an
-            Administrator account to continue.
+            Administrator controls are available only to Administrators. Sign in
+            with an Administrator account to continue.
           </p>
         </div>
       } @else {
@@ -47,7 +50,7 @@ import {
           <p>
             <strong>{{ inactiveRoomCount() }}</strong> deactivated
           </p>
-          <span>Rooms remain in the roster when deactivated</span>
+          <span>Office control at a glance</span>
         </div>
 
         <div class="management-workspace">
@@ -193,6 +196,8 @@ import {
             }
           </section>
         </div>
+
+        <mrb-booking-oversight />
       }
     </section>
   `,

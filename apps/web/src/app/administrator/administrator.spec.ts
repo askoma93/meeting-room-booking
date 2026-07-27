@@ -3,10 +3,10 @@ import {
   HttpTestingController,
   provideHttpClientTesting,
 } from '@angular/common/http/testing';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Administrator } from './administrator';
 
-describe('Administrator Room management', () => {
+describe('Administrator controls', () => {
   const rooms = [
     {
       id: 'room-1',
@@ -23,6 +23,48 @@ describe('Administrator Room management', () => {
       location: 'Floor 1 · Lobby',
       equipment: ['Display'],
       isActive: false,
+    },
+  ];
+  const bookings = [
+    {
+      id: 'booking-1',
+      userId: 'user-1',
+      roomId: 'room-1',
+      startAt: '2030-01-15T08:00:00.000Z',
+      endAt: '2030-01-15T08:30:00.000Z',
+      status: 'ACTIVE',
+      cancelledAt: null,
+      cancelledByUserId: null,
+      cancelledBy: null,
+      canCancel: true,
+      room: { name: 'Dnipro', location: 'Floor 2 · East wing' },
+      user: {
+        id: 'user-1',
+        name: 'Maksym Bondarenko',
+        email: 'maksym@example.com',
+      },
+    },
+    {
+      id: 'booking-2',
+      userId: 'user-2',
+      roomId: 'room-2',
+      startAt: '2030-01-16T10:00:00.000Z',
+      endAt: '2030-01-16T10:30:00.000Z',
+      status: 'CANCELLED',
+      cancelledAt: '2030-01-10T08:00:00.000Z',
+      cancelledByUserId: 'administrator-1',
+      cancelledBy: {
+        id: 'administrator-1',
+        name: 'Anna Kovalenko',
+        email: 'admin@example.com',
+      },
+      canCancel: false,
+      room: { name: 'Podil', location: 'Floor 1 · Lobby' },
+      user: {
+        id: 'user-2',
+        name: 'Sofiia Melnyk',
+        email: 'sofiia@example.com',
+      },
     },
   ];
 
@@ -43,7 +85,7 @@ describe('Administrator Room management', () => {
     const fixture = TestBed.createComponent(Administrator);
     fixture.detectChanges();
     const http = TestBed.inject(HttpTestingController);
-    flushManagementList(http);
+    flushManagementData(http, fixture);
     fixture.detectChanges();
 
     fillRoomForm(fixture.nativeElement, {
@@ -101,6 +143,45 @@ describe('Administrator Room management', () => {
     });
   });
 
+  it('shows Booking Ownership and lets an Administrator cancel any Future Active Booking', () => {
+    const fixture = TestBed.createComponent(Administrator);
+    fixture.detectChanges();
+    const http = TestBed.inject(HttpTestingController);
+    flushManagementData(http, fixture);
+    fixture.detectChanges();
+
+    const bookingLedger = fixture.nativeElement.querySelector(
+      '.booking-ledger',
+    ) as HTMLElement;
+    expect(bookingLedger.textContent).toContain('Maksym Bondarenko');
+    expect(bookingLedger.textContent).toContain('maksym@example.com');
+    expect(bookingLedger.textContent).toContain('Sofiia Melnyk');
+    expect(bookingLedger.textContent).toContain('admin@example.com');
+    expect(bookingLedger.querySelectorAll('.cancel-booking')).toHaveLength(1);
+
+    clickButton(bookingLedger, 'Cancel Dnipro Booking for Maksym Bondarenko');
+    const cancellation = http.expectOne('/api/bookings/booking-1/cancel');
+    expect(cancellation.request.method).toBe('PATCH');
+    cancellation.flush({
+      ...bookings[0],
+      status: 'CANCELLED',
+      cancelledAt: '2030-01-10T09:00:00.000Z',
+      cancelledByUserId: 'administrator-1',
+      cancelledBy: {
+        id: 'administrator-1',
+        name: 'Anna Kovalenko',
+        email: 'admin@example.com',
+      },
+      canCancel: false,
+    });
+    fixture.detectChanges();
+
+    expect(bookingLedger.querySelectorAll('.cancel-booking')).toHaveLength(0);
+    expect(
+      fixture.nativeElement.querySelector('[role="status"]').textContent,
+    ).toContain('Administrative Cancellation recorded');
+  });
+
   it('shows no management actions when the API rejects a regular User', () => {
     const fixture = TestBed.createComponent(Administrator);
     fixture.detectChanges();
@@ -120,12 +201,21 @@ describe('Administrator Room management', () => {
     expect(buttonLabels(fixture.nativeElement)).toEqual([]);
   });
 
-  function flushManagementList(http: HttpTestingController): void {
-    const request = http.expectOne('/api/rooms/management');
-    expect(request.request.headers.get('authorization')).toBe(
+  function flushManagementData(
+    http: HttpTestingController,
+    fixture: ComponentFixture<Administrator>,
+  ): void {
+    const roomsRequest = http.expectOne('/api/rooms/management');
+    expect(roomsRequest.request.headers.get('authorization')).toBe(
       'Bearer administrator-token',
     );
-    request.flush(rooms);
+    roomsRequest.flush(rooms);
+    fixture.detectChanges();
+    const bookingsRequest = http.expectOne('/api/bookings/management');
+    expect(bookingsRequest.request.headers.get('authorization')).toBe(
+      'Bearer administrator-token',
+    );
+    bookingsRequest.flush(bookings);
   }
 
   function fillRoomForm(

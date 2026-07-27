@@ -1,6 +1,7 @@
 import type { AddressInfo } from 'node:net';
 import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { UserRole } from '../../generated/prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { AppModule } from '../app.module';
 import { configureApi } from '../configure-api';
@@ -10,12 +11,15 @@ describe('Bookings API', () => {
   let baseUrl: string;
   let prisma: PrismaService;
   let accessToken: string;
+  let administratorAccessToken: string;
+  let administratorId: string;
   let userId: string;
   let otherUserId: string;
   let activeRoomId: string;
   let inactiveRoomId: string;
 
   const userEmail = 'creator@bookings.example.com';
+  const administratorEmail = 'administrator@bookings.example.com';
   const otherUserEmail = 'other-user@bookings.example.com';
   const roomNames = ['API Booking Room', 'API Inactive Booking Room'];
 
@@ -69,6 +73,37 @@ describe('Bookings API', () => {
     accessToken = session.accessToken;
     userId = session.user.id;
 
+    const administratorRegistration = await fetch(
+      `${baseUrl}/api/auth/register`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          email: administratorEmail,
+          password: 'ValidPass123!',
+        }),
+      },
+    );
+    const administratorSession = (await administratorRegistration.json()) as {
+      user: { id: string };
+    };
+    administratorId = administratorSession.user.id;
+    await prisma.user.update({
+      where: { id: administratorId },
+      data: { role: UserRole.ADMINISTRATOR },
+    });
+    const administratorLogin = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        email: administratorEmail,
+        password: 'ValidPass123!',
+      }),
+    });
+    administratorAccessToken = (
+      (await administratorLogin.json()) as { accessToken: string }
+    ).accessToken;
+
     const otherUser = await prisma.user.create({
       data: {
         email: otherUserEmail,
@@ -90,7 +125,9 @@ describe('Bookings API', () => {
     });
     await prisma.room.deleteMany({ where: { name: { in: roomNames } } });
     await prisma.user.deleteMany({
-      where: { email: { in: [userEmail, otherUserEmail] } },
+      where: {
+        email: { in: [userEmail, administratorEmail, otherUserEmail] },
+      },
     });
     await app.close();
   });
@@ -228,6 +265,89 @@ describe('Bookings API', () => {
     ]);
   });
 
+  it('lets an Administrator inspect every Booking with Booking Ownership details', async () => {
+    const userSlot = futureSlot(9, 0, 30);
+    const otherUserSlot = futureSlot(10, 0, 30);
+    await Promise.all([
+      prisma.booking.create({
+        data: {
+          userId,
+          roomId: activeRoomId,
+          ...dates(userSlot),
+        },
+      }),
+      prisma.booking.create({
+        data: {
+          userId: otherUserId,
+          roomId: activeRoomId,
+          ...dates(otherUserSlot),
+        },
+      }),
+    ]);
+
+    const response = await administratorRequest('/api/bookings/management');
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          userId,
+          startAt: userSlot.startAt,
+          user: {
+            id: userId,
+            name: expect.any(String),
+            email: userEmail,
+          },
+        }),
+        expect.objectContaining({
+          userId: otherUserId,
+          startAt: otherUserSlot.startAt,
+          user: {
+            id: otherUserId,
+            name: 'Other User',
+            email: otherUserEmail,
+          },
+        }),
+      ]),
+    );
+  });
+
+  it('rejects Booking oversight for a regular User', async () => {
+    const response = await request('/api/bookings/management');
+
+    expect(response.status).toBe(403);
+  });
+
+  it('lets an Administrator cancel another User Future Active Booking and records the Administrator', async () => {
+    const otherUserBooking = await prisma.booking.create({
+      data: {
+        userId: otherUserId,
+        roomId: activeRoomId,
+        ...dates(futureSlot(13, 0, 30)),
+      },
+    });
+
+    const response = await administratorRequest(
+      `/api/bookings/${otherUserBooking.id}/cancel`,
+      { method: 'PATCH' },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      id: otherUserBooking.id,
+      userId: otherUserId,
+      status: 'CANCELLED',
+      canCancel: false,
+      cancelledAt: expect.any(String),
+      cancelledByUserId: administratorId,
+      cancelledBy: {
+        id: administratorId,
+        name: expect.any(String),
+        email: administratorEmail,
+      },
+    });
+  });
+
   it('lets a User cancel their own Future Active Booking and releases its Time Slot', async () => {
     const slot = futureSlot(12, 0, 30);
     const created = await createBooking({ roomId: activeRoomId, ...slot });
@@ -330,6 +450,19 @@ describe('Bookings API', () => {
       ...init,
       headers: {
         authorization: `Bearer ${accessToken}`,
+        ...init.headers,
+      },
+    });
+  }
+
+  function administratorRequest(
+    path: string,
+    init: RequestInit = {},
+  ): Promise<Response> {
+    return fetch(`${baseUrl}${path}`, {
+      ...init,
+      headers: {
+        authorization: `Bearer ${administratorAccessToken}`,
         ...init.headers,
       },
     });
