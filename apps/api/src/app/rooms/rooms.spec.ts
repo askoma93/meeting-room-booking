@@ -12,9 +12,11 @@ describe('Rooms API', () => {
   let accessToken: string;
 
   const roomNames = [
-    'API Active Small',
-    'API Active Large',
-    'API Inactive Large',
+    'API Filter Match',
+    'API Fails Capacity',
+    'API Fails Equipment',
+    'API Fails Location',
+    'API Inactive Match',
   ];
 
   beforeAll(async () => {
@@ -34,20 +36,34 @@ describe('Rooms API', () => {
       data: [
         {
           name: roomNames[0],
-          capacity: 4,
-          location: 'Floor 1 · East wing',
-          equipment: ['Display'],
-          isActive: true,
-        },
-        {
-          name: roomNames[1],
           capacity: 10,
           location: 'Floor 3 · East wing',
           equipment: ['Display', 'Video conferencing'],
           isActive: true,
         },
         {
+          name: roomNames[1],
+          capacity: 4,
+          location: 'Floor 3 · East wing',
+          equipment: ['Display', 'Video conferencing'],
+          isActive: true,
+        },
+        {
           name: roomNames[2],
+          capacity: 10,
+          location: 'Floor 3 · East wing',
+          equipment: ['Display'],
+          isActive: true,
+        },
+        {
+          name: roomNames[3],
+          capacity: 10,
+          location: 'Floor 1 · East wing',
+          equipment: ['Display', 'Video conferencing'],
+          isActive: true,
+        },
+        {
+          name: roomNames[4],
           capacity: 12,
           location: 'Floor 3 · East wing',
           equipment: ['Display', 'Video conferencing'],
@@ -85,9 +101,9 @@ describe('Rooms API', () => {
       isActive?: boolean;
     }>;
     expect(rooms.map((room) => room.name)).toEqual(
-      expect.arrayContaining([roomNames[0], roomNames[1]]),
+      expect.arrayContaining(roomNames.slice(0, 4)),
     );
-    expect(rooms.map((room) => room.name)).not.toContain(roomNames[2]);
+    expect(rooms.map((room) => room.name)).not.toContain(roomNames[4]);
     expect(rooms.every((room) => room.isActive === undefined)).toBe(true);
   });
 
@@ -98,9 +114,9 @@ describe('Rooms API', () => {
 
     expect(response.status).toBe(200);
     const rooms = (await response.json()) as Array<{ name: string }>;
-    expect(rooms.map((room) => room.name)).toContain(roomNames[1]);
+    expect(rooms.map((room) => room.name)).toContain(roomNames[0]);
     expect(rooms.map((room) => room.name)).not.toEqual(
-      expect.arrayContaining([roomNames[0], roomNames[2]]),
+      expect.arrayContaining(roomNames.slice(1)),
     );
   });
 

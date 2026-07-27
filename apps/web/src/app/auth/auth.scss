@@ -1,0 +1,108 @@
+:host {
+  display: block;
+}
+
+.auth-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 29rem) minmax(12rem, 1fr);
+  gap: clamp(1rem, 4vw, 3rem);
+  margin-top: 2rem;
+}
+
+.sign-in-form {
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: 1px solid #b9c9db;
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1.2rem 3rem rgba(40, 70, 110, 0.06);
+}
+
+.sign-in-form h2,
+.access-note h2 {
+  margin: 0;
+  color: #10253f;
+  font-family: 'Aptos Display', 'Segoe UI', sans-serif;
+}
+
+.sign-in-form label {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 1rem;
+  color: #35485f;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.sign-in-form input {
+  min-height: 2.9rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #aebfd1;
+  border-radius: 0.4rem;
+  color: #10253f;
+  background: #fbfdff;
+}
+
+.sign-in-form input:focus {
+  border-color: #245dce;
+  outline: 0.18rem solid rgba(36, 93, 206, 0.16);
+}
+
+.sign-in-form button {
+  width: 100%;
+  min-height: 2.9rem;
+  margin-top: 1.25rem;
+  border: 1px solid #245dce;
+  border-radius: 0.4rem;
+  color: white;
+  background: #245dce;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.sign-in-form button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.form-error {
+  margin: 1rem 0 0;
+  color: #a52c2c;
+  line-height: 1.5;
+}
+
+.access-note {
+  align-self: stretch;
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  border-left: 1px solid #b9c9db;
+}
+
+.access-note p {
+  max-width: 26rem;
+  color: #52677f;
+  line-height: 1.65;
+}
+
+.demo-account {
+  display: grid;
+  gap: 0.35rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #cbd8e6;
+  color: #41536a;
+  font-size: 0.82rem;
+}
+
+.demo-account code {
+  color: #174cae;
+}
+
+@media (max-width: 720px) {
+  .auth-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .access-note {
+    border-top: 1px solid #b9c9db;
+    border-left: 0;
+  }
+}

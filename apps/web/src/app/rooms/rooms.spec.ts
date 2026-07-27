@@ -53,12 +53,7 @@ describe('Rooms', () => {
 
     setInput(fixture.nativeElement, '#minimum-capacity', '6');
     fixture.detectChanges();
-    setInput(
-      fixture.nativeElement,
-      '#equipment',
-      'Video conferencing',
-      'change',
-    );
+    setInput(fixture.nativeElement, '#equipment', 'Video conferencing');
     fixture.detectChanges();
     setInput(fixture.nativeElement, '#location', 'West wing');
     await fixture.whenStable();

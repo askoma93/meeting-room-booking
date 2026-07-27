@@ -41,12 +41,12 @@ import { RoomFilters, RoomSummary, RoomsApi } from './rooms-api';
 
           <label class="filter-field" for="equipment">
             Equipment
-            <select id="equipment" name="equipment">
-              <option value="">Any equipment</option>
-              @for (option of equipmentOptions; track option) {
-                <option [value]="option">{{ option }}</option>
-              }
-            </select>
+            <input
+              id="equipment"
+              name="equipment"
+              type="search"
+              placeholder="Display, whiteboard…"
+            />
           </label>
 
           <label class="filter-field" for="location">
@@ -69,7 +69,7 @@ import { RoomFilters, RoomSummary, RoomsApi } from './rooms-api';
 
         <section aria-labelledby="available-rooms-title" aria-live="polite">
           <div class="results-heading">
-            <h2 id="available-rooms-title">Available spaces</h2>
+            <h2 id="available-rooms-title">Active Rooms</h2>
             @if (!loading() && !errorMessage()) {
               <span class="result-count">{{ resultLabel() }}</span>
             }
@@ -136,14 +136,6 @@ export class Rooms implements OnInit {
   protected readonly loading = signal(true);
   protected readonly errorMessage = signal('');
   protected readonly needsSignIn = signal(false);
-  protected readonly equipmentOptions = [
-    'Display',
-    'Projector',
-    'Speakerphone',
-    'Video conferencing',
-    'Whiteboard',
-  ];
-
   ngOnInit(): void {
     this.loadRooms();
   }
