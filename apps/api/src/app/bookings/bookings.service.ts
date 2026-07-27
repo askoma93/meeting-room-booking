@@ -17,6 +17,22 @@ const bookingActiveRoomGuard = 'Booking_active_room_guard';
 const bookingFutureStartGuard = 'Booking_future_start_guard';
 const bookingOverlapConflict =
   'The Room already has an Active Booking that overlaps this Time Slot.';
+const bookingDetailsSelect = {
+  id: true,
+  userId: true,
+  roomId: true,
+  startAt: true,
+  endAt: true,
+  status: true,
+  cancelledAt: true,
+  cancelledByUserId: true,
+  room: {
+    select: {
+      name: true,
+      location: true,
+    },
+  },
+} satisfies Prisma.BookingSelect;
 
 const officeTimeFormatter = new Intl.DateTimeFormat('en-CA', {
   timeZone: officeTimeZone,
@@ -88,6 +104,73 @@ export class BookingsService {
       throw error;
     }
   }
+
+  async listMyBookings(userId: string) {
+    const checkedAt = new Date();
+    const bookings = await this.prisma.booking.findMany({
+      where: { userId },
+      select: bookingDetailsSelect,
+      orderBy: { startAt: 'asc' },
+    });
+
+    return bookings.map((booking) =>
+      withCancellationEligibility(booking, checkedAt),
+    );
+  }
+
+  async cancelMyBooking(userId: string, bookingId: string) {
+    const cancelledAt = new Date();
+    const cancellation = await this.prisma.booking.updateMany({
+      where: {
+        id: bookingId,
+        userId,
+        status: 'ACTIVE',
+        startAt: { gt: cancelledAt },
+      },
+      data: {
+        status: 'CANCELLED',
+        cancelledAt,
+        cancelledByUserId: userId,
+      },
+    });
+
+    if (cancellation.count === 0) {
+      const booking = await this.prisma.booking.findFirst({
+        where: { id: bookingId, userId },
+        select: { status: true, startAt: true },
+      });
+
+      if (!booking) {
+        throw new NotFoundException('Booking not found.');
+      }
+
+      throw new BadRequestException(
+        booking.status === 'CANCELLED'
+          ? 'A Cancelled Booking cannot be cancelled again.'
+          : 'A Booking cannot be cancelled after its Time Slot has started.',
+      );
+    }
+
+    const booking = await this.prisma.booking.findUniqueOrThrow({
+      where: { id: bookingId },
+      select: bookingDetailsSelect,
+    });
+
+    return withCancellationEligibility(booking, cancelledAt);
+  }
+}
+
+type BookingDetails = Prisma.BookingGetPayload<{
+  select: typeof bookingDetailsSelect;
+}>;
+
+function withCancellationEligibility(booking: BookingDetails, checkedAt: Date) {
+  return {
+    ...booking,
+    canCancel:
+      booking.status === 'ACTIVE' &&
+      booking.startAt.getTime() > checkedAt.getTime(),
+  };
 }
 
 function validateTimeSlot(startAt: Date, endAt: Date): void {

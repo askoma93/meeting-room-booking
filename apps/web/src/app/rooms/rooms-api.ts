@@ -1,5 +1,6 @@
-import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
+import { authorizationHeaders } from '../auth/authorization-headers';
 
 export interface RoomSummary {
   id: string;
@@ -38,14 +39,14 @@ export class RoomsApi {
     }
 
     return this.http.get<RoomSummary[]>('/api/rooms', {
-      headers: this.authorizationHeaders(),
+      headers: authorizationHeaders(),
       params,
     });
   }
 
   get(roomId: string) {
     return this.http.get<RoomSummary>(`/api/rooms/${roomId}`, {
-      headers: this.authorizationHeaders(),
+      headers: authorizationHeaders(),
     });
   }
 
@@ -53,27 +54,17 @@ export class RoomsApi {
     return this.http.get<OccupiedTimeSlot[]>(
       `/api/rooms/${roomId}/availability`,
       {
-        headers: this.authorizationHeaders(),
+        headers: authorizationHeaders(),
         params: new HttpParams().set('date', date),
       },
     );
   }
 
-  createBooking(
-    roomId: string,
-    booking: { startAt: string; endAt: string },
-  ) {
+  createBooking(roomId: string, booking: { startAt: string; endAt: string }) {
     return this.http.post(
       '/api/bookings',
       { roomId, ...booking },
-      { headers: this.authorizationHeaders() },
+      { headers: authorizationHeaders() },
     );
-  }
-
-  private authorizationHeaders(): HttpHeaders | undefined {
-    const accessToken = localStorage.getItem('mrb.accessToken');
-    return accessToken
-      ? new HttpHeaders({ authorization: `Bearer ${accessToken}` })
-      : undefined;
   }
 }

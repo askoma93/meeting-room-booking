@@ -5,16 +5,18 @@ import { PrismaService } from '../../database/prisma.service';
 import { AppModule } from '../app.module';
 import { configureApi } from '../configure-api';
 
-describe('Booking creation API', () => {
+describe('Bookings API', () => {
   let app: INestApplication;
   let baseUrl: string;
   let prisma: PrismaService;
   let accessToken: string;
   let userId: string;
+  let otherUserId: string;
   let activeRoomId: string;
   let inactiveRoomId: string;
 
   const userEmail = 'creator@bookings.example.com';
+  const otherUserEmail = 'other-user@bookings.example.com';
   const roomNames = ['API Booking Room', 'API Inactive Booking Room'];
 
   beforeAll(async () => {
@@ -66,6 +68,16 @@ describe('Booking creation API', () => {
     };
     accessToken = session.accessToken;
     userId = session.user.id;
+
+    const otherUser = await prisma.user.create({
+      data: {
+        email: otherUserEmail,
+        name: 'Other User',
+        passwordHash: 'not-used-in-this-test',
+      },
+      select: { id: true },
+    });
+    otherUserId = otherUser.id;
   });
 
   afterEach(async () => {
@@ -77,7 +89,9 @@ describe('Booking creation API', () => {
       where: { roomId: { in: [activeRoomId, inactiveRoomId] } },
     });
     await prisma.room.deleteMany({ where: { name: { in: roomNames } } });
-    await prisma.user.deleteMany({ where: { email: userEmail } });
+    await prisma.user.deleteMany({
+      where: { email: { in: [userEmail, otherUserEmail] } },
+    });
     await app.close();
   });
 
@@ -155,6 +169,147 @@ describe('Booking creation API', () => {
     expect(response.status).toBe(404);
   });
 
+  it('shows a User their own Active and Cancelled Bookings without exposing another User booking', async () => {
+    const activeSlot = futureSlot(9, 0, 30);
+    const cancelledSlot = futureSlot(10, 0, 30);
+    const otherUserSlot = futureSlot(11, 0, 30);
+    const cancelledAt = new Date();
+
+    await Promise.all([
+      prisma.booking.create({
+        data: {
+          userId,
+          roomId: activeRoomId,
+          ...dates(activeSlot),
+        },
+      }),
+      prisma.booking.create({
+        data: {
+          userId,
+          roomId: activeRoomId,
+          ...dates(cancelledSlot),
+          status: 'CANCELLED',
+          cancelledAt,
+          cancelledByUserId: userId,
+        },
+      }),
+      prisma.booking.create({
+        data: {
+          userId: otherUserId,
+          roomId: activeRoomId,
+          ...dates(otherUserSlot),
+        },
+      }),
+    ]);
+
+    const response = await request('/api/bookings');
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual([
+      expect.objectContaining({
+        userId,
+        roomId: activeRoomId,
+        startAt: activeSlot.startAt,
+        status: 'ACTIVE',
+        canCancel: true,
+        cancelledAt: null,
+        cancelledByUserId: null,
+        room: expect.objectContaining({ name: roomNames[0] }),
+      }),
+      expect.objectContaining({
+        userId,
+        roomId: activeRoomId,
+        startAt: cancelledSlot.startAt,
+        status: 'CANCELLED',
+        canCancel: false,
+        cancelledAt: cancelledAt.toISOString(),
+        cancelledByUserId: userId,
+      }),
+    ]);
+  });
+
+  it('lets a User cancel their own Future Active Booking and releases its Time Slot', async () => {
+    const slot = futureSlot(12, 0, 30);
+    const created = await createBooking({ roomId: activeRoomId, ...slot });
+    const booking = (await created.json()) as { id: string };
+
+    const cancellation = await request(`/api/bookings/${booking.id}/cancel`, {
+      method: 'PATCH',
+    });
+
+    expect(cancellation.status).toBe(200);
+    await expect(cancellation.json()).resolves.toMatchObject({
+      id: booking.id,
+      status: 'CANCELLED',
+      canCancel: false,
+      cancelledAt: expect.any(String),
+      cancelledByUserId: userId,
+    });
+    expect(
+      (
+        await createBooking({
+          roomId: activeRoomId,
+          ...slot,
+        })
+      ).status,
+    ).toBe(201);
+  });
+
+  it('rejects cancellation of another User booking and an already Cancelled Booking', async () => {
+    const otherUserBooking = await prisma.booking.create({
+      data: {
+        userId: otherUserId,
+        roomId: activeRoomId,
+        ...dates(futureSlot(13, 0, 30)),
+      },
+    });
+    const cancelledBooking = await prisma.booking.create({
+      data: {
+        userId,
+        roomId: activeRoomId,
+        ...dates(futureSlot(14, 0, 30)),
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+        cancelledByUserId: userId,
+      },
+    });
+
+    expect(
+      (
+        await request(`/api/bookings/${otherUserBooking.id}/cancel`, {
+          method: 'PATCH',
+        })
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await request(`/api/bookings/${cancelledBooking.id}/cancel`, {
+          method: 'PATCH',
+        })
+      ).status,
+    ).toBe(400);
+  });
+
+  it('rejects cancellation after an Active Booking has started', async () => {
+    const startAt = new Date(Date.now() + 1_000);
+    const startedBooking = await prisma.booking.create({
+      data: {
+        userId,
+        roomId: activeRoomId,
+        startAt,
+        endAt: new Date(startAt.getTime() + 15 * 60_000),
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 1_100));
+
+    const response = await request(
+      `/api/bookings/${startedBooking.id}/cancel`,
+      { method: 'PATCH' },
+    );
+
+    expect(response.status).toBe(400);
+  });
+
   function createBooking(booking: {
     roomId: string;
     startAt: string;
@@ -168,6 +323,26 @@ describe('Booking creation API', () => {
       },
       body: JSON.stringify(booking),
     });
+  }
+
+  function request(path: string, init: RequestInit = {}): Promise<Response> {
+    return fetch(`${baseUrl}${path}`, {
+      ...init,
+      headers: {
+        authorization: `Bearer ${accessToken}`,
+        ...init.headers,
+      },
+    });
+  }
+
+  function dates(slot: { startAt: string; endAt: string }): {
+    startAt: Date;
+    endAt: Date;
+  } {
+    return {
+      startAt: new Date(slot.startAt),
+      endAt: new Date(slot.endAt),
+    };
   }
 
   function futureSlot(

@@ -1,5 +1,6 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
+import { authorizationHeaders } from '../auth/authorization-headers';
 
 export interface ManagedRoom {
   id: string;
@@ -23,13 +24,13 @@ export class AdministratorApi {
 
   listRooms() {
     return this.http.get<ManagedRoom[]>('/api/rooms/management', {
-      headers: this.authorizationHeaders(),
+      headers: authorizationHeaders(),
     });
   }
 
   createRoom(room: EditableRoomFields) {
     return this.http.post<ManagedRoom>('/api/rooms', room, {
-      headers: this.authorizationHeaders(),
+      headers: authorizationHeaders(),
     });
   }
 
@@ -38,14 +39,7 @@ export class AdministratorApi {
     changes: Partial<EditableRoomFields & { isActive: boolean }>,
   ) {
     return this.http.patch<ManagedRoom>(`/api/rooms/${roomId}`, changes, {
-      headers: this.authorizationHeaders(),
+      headers: authorizationHeaders(),
     });
-  }
-
-  private authorizationHeaders(): HttpHeaders {
-    const accessToken = localStorage.getItem('mrb.accessToken');
-    return accessToken
-      ? new HttpHeaders({ authorization: `Bearer ${accessToken}` })
-      : new HttpHeaders();
   }
 }
