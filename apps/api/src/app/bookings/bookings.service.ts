@@ -12,6 +12,9 @@ const bookingGranularityMilliseconds = 15 * 60 * 1000;
 const bookingHoursStartMinutes = 8 * 60;
 const bookingHoursEndMinutes = 20 * 60;
 const officeTimeZone = 'Europe/Kyiv';
+const bookingOverlapGuard = 'Booking_no_overlapping_active_bookings';
+const bookingActiveRoomGuard = 'Booking_active_room_guard';
+const bookingFutureStartGuard = 'Booking_future_start_guard';
 const bookingOverlapConflict =
   'The Room already has an Active Booking that overlaps this Time Slot.';
 
@@ -67,19 +70,15 @@ export class BookingsService {
         error instanceof Prisma.PrismaClientKnownRequestError &&
         error.code === 'P2039'
       ) {
-        if (error.message.includes('Booking_no_overlapping_active_bookings')) {
+        if (error.message.includes(bookingOverlapGuard)) {
           throw new ConflictException(bookingOverlapConflict);
         }
 
-        if (
-          error.message.includes(
-            'Future Active Bookings require an Active Room.',
-          )
-        ) {
+        if (error.message.includes(bookingActiveRoomGuard)) {
           throw new NotFoundException('Active Room not found.');
         }
 
-        if (error.message.includes('Active Bookings require a future start.')) {
+        if (error.message.includes(bookingFutureStartGuard)) {
           throw new BadRequestException(
             'A Future Booking must start later than the current time.',
           );

@@ -8,7 +8,7 @@ BEGIN
        AND NEW."startAt" <= CURRENT_TIMESTAMP THEN
         RAISE EXCEPTION USING
             ERRCODE = '23514',
-            MESSAGE = 'Active Bookings require a future start.',
+            MESSAGE = 'Booking_future_start_guard',
             CONSTRAINT = 'Booking_future_start_guard';
     END IF;
 
@@ -22,7 +22,7 @@ BEGIN
        AND room_is_active IS FALSE THEN
         RAISE EXCEPTION USING
             ERRCODE = '23514',
-            MESSAGE = 'Future Active Bookings require an Active Room.',
+            MESSAGE = 'Booking_active_room_guard',
             CONSTRAINT = 'Booking_active_room_guard';
     END IF;
 
