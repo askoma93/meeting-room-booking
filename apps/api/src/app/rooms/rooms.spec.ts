@@ -314,7 +314,7 @@ describe('Rooms API', () => {
     ]);
   });
 
-  it('keeps an Active Room active while it has a future Active Booking', async () => {
+  it('blocks deactivation for a future Active Booking but allows it after cancellation', async () => {
     const room = await prisma.room.create({
       data: {
         name: 'API Deactivation Guard',
@@ -323,7 +323,7 @@ describe('Rooms API', () => {
         equipment: [],
       },
     });
-    await prisma.booking.create({
+    const booking = await prisma.booking.create({
       data: {
         roomId: room.id,
         userId: registeredUserId,
@@ -346,6 +346,27 @@ describe('Rooms API', () => {
     await expect(
       prisma.room.findUniqueOrThrow({ where: { id: room.id } }),
     ).resolves.toMatchObject({ isActive: true });
+
+    await prisma.booking.update({
+      where: { id: booking.id },
+      data: {
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+        cancelledByUserId: registeredUserId,
+      },
+    });
+
+    const allowedResponse = await fetch(`${baseUrl}/api/rooms/${room.id}`, {
+      method: 'PATCH',
+      headers: administratorHeaders(),
+      body: JSON.stringify({ isActive: false }),
+    });
+
+    expect(allowedResponse.status).toBe(200);
+    await expect(allowedResponse.json()).resolves.toMatchObject({
+      id: room.id,
+      isActive: false,
+    });
   });
 
   it('serializes concurrent deactivation and future Active Booking creation', async () => {

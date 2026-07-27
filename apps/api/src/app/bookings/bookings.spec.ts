@@ -375,7 +375,7 @@ describe('Bookings API', () => {
     ).toBe(201);
   });
 
-  it('rejects cancellation of another User booking and an already Cancelled Booking', async () => {
+  it("masks another User's Booking as not found", async () => {
     const otherUserBooking = await prisma.booking.create({
       data: {
         userId: otherUserId,
@@ -383,6 +383,19 @@ describe('Bookings API', () => {
         ...dates(futureSlot(13, 0, 30)),
       },
     });
+
+    const response = await request(
+      `/api/bookings/${otherUserBooking.id}/cancel`,
+      { method: 'PATCH' },
+    );
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toMatchObject({
+      message: 'Booking not found.',
+    });
+  });
+
+  it('rejects cancellation of an already Cancelled Booking', async () => {
     const cancelledBooking = await prisma.booking.create({
       data: {
         userId,
@@ -394,20 +407,12 @@ describe('Bookings API', () => {
       },
     });
 
-    expect(
-      (
-        await request(`/api/bookings/${otherUserBooking.id}/cancel`, {
-          method: 'PATCH',
-        })
-      ).status,
-    ).toBe(404);
-    expect(
-      (
-        await request(`/api/bookings/${cancelledBooking.id}/cancel`, {
-          method: 'PATCH',
-        })
-      ).status,
-    ).toBe(400);
+    const response = await request(
+      `/api/bookings/${cancelledBooking.id}/cancel`,
+      { method: 'PATCH' },
+    );
+
+    expect(response.status).toBe(400);
   });
 
   it('rejects cancellation after an Active Booking has started', async () => {
