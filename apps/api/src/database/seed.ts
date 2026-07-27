@@ -5,12 +5,9 @@ import {
   PrismaClient,
   UserRole,
 } from '../generated/prisma/client';
+import { resolveDatabaseUrl } from './database-environment';
 
-const connectionString =
-  process.env.DATABASE_URL ??
-  (process.env.NODE_ENV === 'test'
-    ? 'postgresql://meeting_room_test:meeting_room_test@localhost:5433/meeting_room_booking_test?schema=public'
-    : 'postgresql://meeting_room:meeting_room@localhost:5432/meeting_room_booking?schema=public');
+const connectionString = resolveDatabaseUrl();
 
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString }),

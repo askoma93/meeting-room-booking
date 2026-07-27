@@ -1,8 +1,21 @@
 import { expect, Page, test } from '@playwright/test';
 
 const demoPassword = 'Demo123!';
-const runId = Date.now();
-const runDateOffset = 30 + (Math.floor(runId / 1000) % 1_000_000);
+const runIdentifier = Date.now();
+const isolatedBookingDayOffset = bookingDayOffsetFor(runIdentifier);
+
+interface TimeSlotInput {
+  date: string;
+  start: string;
+  end: string;
+}
+
+interface RoomFormInput {
+  name: string;
+  capacity: string;
+  location: string;
+  equipment: string;
+}
 
 async function signIn(page: Page, email: string): Promise<void> {
   await page.goto('/auth');
@@ -25,9 +38,7 @@ async function openRoom(page: Page, roomName: string): Promise<void> {
 
 async function chooseTimeSlot(
   page: Page,
-  date: string,
-  start: string,
-  end: string,
+  { date, start, end }: TimeSlotInput,
 ): Promise<void> {
   const dateInput = page.getByLabel('Date');
   await dateInput.fill(date);
@@ -36,11 +47,25 @@ async function chooseTimeSlot(
   await page.getByLabel('End').selectOption(end);
 }
 
+async function fillRoomForm(
+  page: Page,
+  { name, capacity, location, equipment }: RoomFormInput,
+): Promise<void> {
+  await page.getByLabel('Room name').fill(name);
+  await page.getByLabel('Capacity').fill(capacity);
+  await page.getByLabel('Location').fill(location);
+  await page.getByRole('textbox', { name: /^Equipment/ }).fill(equipment);
+}
+
 async function bookTimeSlot(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Book Time Slot' }).click();
   await expect(page.getByRole('status')).toHaveText(
     'Time Slot booked. The room board is updated.',
   );
+}
+
+function bookingDayOffsetFor(identifier: number): number {
+  return 30 + (Math.floor(identifier / 1000) % 1_000_000);
 }
 
 function futureOfficeDate(daysAhead: number): string {
@@ -68,15 +93,23 @@ function futureOfficeDate(daysAhead: number): string {
 test('a User creates a Booking, sees an overlap rejected, and cancels their Future Booking', async ({
   page,
 }) => {
-  const bookingDate = futureOfficeDate(runDateOffset);
+  const bookingDate = futureOfficeDate(isolatedBookingDayOffset);
 
   await signIn(page, 'maksym@example.com');
   await openRoom(page, 'Lviv');
 
-  await chooseTimeSlot(page, bookingDate, '16:00', '16:30');
+  await chooseTimeSlot(page, {
+    date: bookingDate,
+    start: '16:00',
+    end: '16:30',
+  });
   await bookTimeSlot(page);
 
-  await chooseTimeSlot(page, bookingDate, '16:15', '16:45');
+  await chooseTimeSlot(page, {
+    date: bookingDate,
+    start: '16:15',
+    end: '16:45',
+  });
   await page.getByRole('button', { name: 'Book Time Slot' }).click();
   await expect(page.getByRole('alert')).toHaveText(
     'That Time Slot just became occupied. Choose another time and try again.',
@@ -101,7 +134,7 @@ test('a User creates a Booking, sees an overlap rejected, and cancels their Futu
 test('an Administrator creates, edits, deactivates, and reactivates a Room', async ({
   page,
 }) => {
-  const roomName = `E2E Atlas ${runId}`;
+  const roomName = `E2E Atlas ${runIdentifier}`;
   const editedRoomName = `${roomName} Updated`;
 
   await signIn(page, 'admin@example.com');
@@ -113,12 +146,12 @@ test('an Administrator creates, edits, deactivates, and reactivates a Room', asy
     }),
   ).toBeVisible();
 
-  await page.getByLabel('Room name').fill(roomName);
-  await page.getByLabel('Capacity').fill('5');
-  await page.getByLabel('Location').fill('Floor 5 · Test wing');
-  await page
-    .getByRole('textbox', { name: /^Equipment/ })
-    .fill('Display, Whiteboard');
+  await fillRoomForm(page, {
+    name: roomName,
+    capacity: '5',
+    location: 'Floor 5 · Test wing',
+    equipment: 'Display, Whiteboard',
+  });
   await page.getByRole('button', { name: 'Add Room' }).click();
 
   const createdRoom = page.locator('.managed-room-list > li').filter({
@@ -128,12 +161,12 @@ test('an Administrator creates, edits, deactivates, and reactivates a Room', asy
   await expect(createdRoom).toContainText('5');
 
   await createdRoom.getByRole('button', { name: `Edit ${roomName}` }).click();
-  await page.getByLabel('Room name').fill(editedRoomName);
-  await page.getByLabel('Capacity').fill('7');
-  await page.getByLabel('Location').fill('Floor 6 · QA wing');
-  await page
-    .getByRole('textbox', { name: /^Equipment/ })
-    .fill('Projector, Speakerphone');
+  await fillRoomForm(page, {
+    name: editedRoomName,
+    capacity: '7',
+    location: 'Floor 6 · QA wing',
+    equipment: 'Projector, Speakerphone',
+  });
   await page.getByRole('button', { name: 'Save changes' }).click();
 
   const editedRoom = page.locator('.managed-room-list > li').filter({
@@ -161,11 +194,15 @@ test('an Administrator creates, edits, deactivates, and reactivates a Room', asy
 test("an Administrator records Administrative Cancellation for another User's Booking", async ({
   page,
 }) => {
-  const bookingDate = futureOfficeDate(runDateOffset + 1);
+  const bookingDate = futureOfficeDate(isolatedBookingDayOffset + 1);
 
   await signIn(page, 'maksym@example.com');
   await openRoom(page, 'Odesa');
-  await chooseTimeSlot(page, bookingDate, '14:00', '14:30');
+  await chooseTimeSlot(page, {
+    date: bookingDate,
+    start: '14:00',
+    end: '14:30',
+  });
   await bookTimeSlot(page);
 
   await signIn(page, 'admin@example.com');
