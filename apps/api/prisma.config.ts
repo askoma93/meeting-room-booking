@@ -31,6 +31,8 @@ export default defineConfig({
   datasource: {
     url:
       process.env.DATABASE_URL ??
-      'postgresql://meeting_room:meeting_room@localhost:5432/meeting_room_booking?schema=public',
+      (isTest
+        ? 'postgresql://meeting_room_test:meeting_room_test@localhost:5433/meeting_room_booking_test?schema=public'
+        : 'postgresql://meeting_room:meeting_room@localhost:5432/meeting_room_booking?schema=public'),
   },
 });

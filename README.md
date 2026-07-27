@@ -58,7 +58,21 @@ cp apps/api/.env.example apps/api/.env.local
 ```
 
 `PORT` defaults to `3000`. `DATABASE_URL` is required by the API and points at
-the development PostgreSQL service in the tracked example.
+the development PostgreSQL service in the tracked example. `JWT_SECRET` signs
+one-hour access tokens and must be replaced with a random value of at least 32
+characters outside tests.
+
+## Authentication API
+
+Registering always creates a regular User, even if a caller supplies additional
+role fields. Pass the returned access token as
+`Authorization: Bearer <accessToken>` when calling protected routes.
+
+| Method | Route                | Access        | Purpose                            |
+| ------ | -------------------- | ------------- | ---------------------------------- |
+| POST   | `/api/auth/register` | Public        | Register with email/password       |
+| POST   | `/api/auth/login`    | Public        | Start a User/Administrator session |
+| GET    | `/api/auth/me`       | Authenticated | Read the current session user      |
 
 ## Database workflow
 
